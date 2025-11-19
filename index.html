@@ -59,7 +59,7 @@
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;background:var(--bg-color);color:var(--text-color);transition:background-color 0.6s ease}
     .video-background{position:fixed;inset:0;z-index:0;overflow:hidden;background:var(--bg-color);transition:opacity .6s ease}
-    .video-background video{position:absolute;top:50%;left:50%;min-width:100%;min-height:100%;transform:translate(-50%,-50%);object-fit:cover;filter:contrast(1.02) saturate(1.05) brightness(0.9);image-rendering:crisp-edges}
+    .video-background video{position:absolute;top:50%;left:50%;min-width:100%;min-height:100%;transform:translate(-50%,-50%);object-fit:cover;filter:contrast(1.02) saturate(1.05) brightness(0.9);image-rendering:-webkit-optimize-contrast;image-rendering:-webkit-crisp-edges;image-rendering:crisp-edges}
     .video-background video::-webkit-media-controls{display:none !important}
     .video-background video::-webkit-media-controls-enclosure{display:none !important}
     .retro-overlay{position:fixed;inset:0;z-index:1;pointer-events:none;background-image:linear-gradient(transparent 60%, rgba(0,0,0,0.12) 100%), radial-gradient(circle at 50% 10%, rgba(255,255,255,0.03), transparent 20%);mix-blend-mode:overlay}
@@ -72,7 +72,7 @@
     .container{position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column;gap:1rem;align-items:center;padding:3.5rem 1rem}
 
     /* High-contrast top bar */
-    .topbar{width:min(1100px,100%);background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.08);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:14px;padding:1rem 1rem 1.1rem;box-shadow:0 8px 30px rgba(0,0,0,0.35)}
+    .topbar{width:min(1100px,100%);background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.08);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-radius:14px;padding:1rem 1rem 1.1rem;box-shadow:0 8px 30px rgba(0,0,0,0.35)}
     h1{font-size:clamp(1.4rem,2.6vw,2.2rem);text-align:center;margin-bottom:.7rem;text-shadow:0 2px 10px rgba(0,0,0,.65)}
     .controls{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;justify-content:center}
     .btn{display:inline-flex;align-items:center;gap:.5rem;background:rgba(0,0,0,0.55);color:var(--text-color);border:1px solid rgba(255,255,255,0.16);padding:.6rem 1rem;border-radius:999px;cursor:pointer;transition:transform .18s,box-shadow .18s,background .2s;font-weight:600}
@@ -106,12 +106,16 @@
       .container{padding:2rem 1rem}
       .topbar{padding:.9rem}
     }
+    .warp-overlay video.warp-player{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  background:#000; /* ensures no see-through edges */
+}
   </style>
 </head>
 <body data-theme="neon">
   <!-- Video + overlay -->
   <div class="video-background" aria-hidden="true" id="videoBg">
-    <video autoplay muted loop playsinline id="bg-video" preload="auto" disablePictureInPicture controlslist="nodownload nofullscreen noremoteplayback" poster="">
+    <video autoplay muted loop id="bg-video" preload="auto" disablePictureInPicture poster="">
       <source src="background-final.mp4" type="video/mp4">
       Your browser does not support the video tag.
     </video>
@@ -264,541 +268,271 @@
   <div id="cursorCore" class="cursor-core" aria-hidden="true"></div>
 
   <script>
-    // Basic utilities
-    const $ = sel => document.querySelector(sel);
-    const $$ = sel => Array.from(document.querySelectorAll(sel));
-    let isCinematic = false;
-    let cancelWarp = null;
+  // Basic utilities
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  let isCinematic = false;
 
-    // Ensure video attempts to play
-    document.addEventListener('DOMContentLoaded', () => {
-      const v = $('#bg-video');
-      if (v) v.play().catch(() => document.body.addEventListener('click', () => v.play(), { once: true }));
-      initPanelToggles();
-      initControls();
-      loadTheme();
-    });
+  /* NEW: play the attached stars video, ramp playbackRate to 5x, white-flash, return */
+  function startCinematic() {
+    if (isCinematic) return;
+    isCinematic = true;
 
-    // Cinematic: fade to black, pause video, then warp
-    function startCinematic() {
-      if (isCinematic) return;
-      isCinematic = true;
+    const overlay = document.getElementById('warpOverlay');
+    const bgVideo = document.getElementById('bg-video');
+    const videoBg = document.getElementById('videoBg');
 
-      const blackout = $('#blackout');
-      const video = $('#bg-video');
-      const videoBg = $('#videoBg');
+    if (!overlay) { isCinematic = false; return; }
 
-      blackout.classList.add('show');
-      requestAnimationFrame(() => blackout.classList.add('visible'));
-      if (videoBg) videoBg.style.opacity = '0';
-      if (video) { try { video.pause(); } catch {} }
+    // Pause/dim the background video
+    if (bgVideo) { try { bgVideo.pause(); } catch {} }
+    if (videoBg) videoBg.style.opacity = '0';
 
-      // Start warp after fade
-      setTimeout(() => warpSpeed({ starfieldMs: 18000, supernovaMs: 3500, whiteFlashMs: 200 }), 700);
+    // Activate overlay
+    overlay.classList.add('active');
+    overlay.innerHTML = '';
+
+    // Use URL-encoded path for spaces/parentheses
+    const WARP_SRC = 'Screensaver%20stars%20(2).mp4';
+    const warp = document.createElement('video');
+    warp.className = 'warp-player';
+    warp.src = WARP_SRC;
+    warp.muted = true;
+    warp.playsInline = true;
+    warp.autoplay = true;
+    warp.preload = 'auto';
+    warp.loop = false;
+    warp.setAttribute('disablePictureInPicture','');
+    warp.setAttribute('controlslist','nodownload nofullscreen noremoteplayback');
+    overlay.appendChild(warp);
+
+    let rateTimer = null;
+    let exploded = false;
+
+    const SPEED_MAX = 5.0;        // target 5x
+    const FLASH_MS = 180;         // white flash length
+    const EXPLOSION_LEAD = 0.55;  // seconds reserved at end for flash
+
+    const easeInOutCubic = t => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+
+    function cleanup() {
+      if (rateTimer) { clearInterval(rateTimer); rateTimer = null; }
+      overlay.classList.remove('active');
+      overlay.innerHTML = '';
     }
 
-    // Canvas-based warp with EXTREME star trails and white-flash return
-    function warpSpeed({ starfieldMs = 18000, supernovaMs = 3500, whiteFlashMs = 200 } = {}) {
-      const overlay = $('#warpOverlay');
-      overlay.classList.add('active');
-      overlay.innerHTML = '';
+    function whiteFlashThenReturn() {
+      const flash = document.createElement('div');
+      flash.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:12000;pointer-events:none;opacity:1';
+      document.body.appendChild(flash);
 
-      const canvas = document.createElement('canvas');
-      canvas.id = 'warpCanvas';
-      canvas.style.cssText = 'width:100%;height:100%;display:block;background:#000'; // Added black background
-      overlay.appendChild(canvas);
-      const ctx = canvas.getContext('2d', { alpha: false }); // Performance: disable alpha channel
+      cleanup();
 
-      let cx, cy, fov, rafId;
-      const depth = 8000;
-      const minZ = 40;
+      if (videoBg) videoBg.style.opacity = '1';
+      if (bgVideo) { try { bgVideo.play(); } catch {} }
 
-      function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        cx = canvas.width / 2;
-        cy = canvas.height / 2;
-        fov = Math.min(canvas.width, canvas.height) * 1.1;
-      }
-      resize();
-      window.addEventListener('resize', resize);
+      setTimeout(() => {
+        flash.style.transition = 'opacity .25s ease-out';
+        flash.style.opacity = '0';
+        setTimeout(() => { flash.remove(); isCinematic = false; }, 250);
+      }, FLASH_MS);
+    }
 
-      // Reduce star count for better performance
-      const starCount = Math.max(800, Math.floor((canvas.width * canvas.height) / 1200));
-      const stars = Array.from({ length: starCount }, () => newStar());
-
-      function newStar() {
-        return {
-          x: (Math.random() * 2.4 - 1.2),
-          y: (Math.random() * 2.4 - 1.2),
-          z: Math.random() * (depth - minZ) + minZ
-        };
+    warp.addEventListener('loadedmetadata', () => {
+      if (!isFinite(warp.duration) || warp.duration <= 0) {
+        warp.play().finally(() => setTimeout(whiteFlashThenReturn, 2000));
+        return;
       }
 
-      ctx.lineCap = 'round';
+      const rampEnd = Math.max(0.1, warp.duration - EXPLOSION_LEAD);
 
-      const state = { phase: 'starfield', start: null, last: performance.now(), running: true };
+      warp.play().catch(() => {
+        const resume = () => { warp.play().catch(()=>{}); document.removeEventListener('click', resume, true); };
+        document.addEventListener('click', resume, true);
+      });
 
-      function drawStarfield(ts) {
-        if (!state.start) { state.start = ts; state.last = ts; }
-        const dt = Math.max(0.001, Math.min(0.1, (ts - state.last) / 1000)); // Cap delta time
-        state.last = ts;
+      // Smoothly ramp playbackRate from 1 -> 5 over the ramp window
+      rateTimer = setInterval(() => {
+        const t = Math.min(1, Math.max(0, warp.currentTime / rampEnd));
+        const rate = 1 + (SPEED_MAX - 1) * easeInOutCubic(t);
+        if (warp.playbackRate !== rate) warp.playbackRate = rate;
 
-        const elapsed = ts - state.start;
-        const t = Math.min(1, elapsed / starfieldMs);
-
-        // EXTREME acceleration curve
-        let speed;
-        if (t < 0.6) {
-          const t1 = t / 0.6;
-          speed = 400 + 2800 * (t1 * t1 * t1);
-        } else if (t < 0.85) {
-          const t2 = (t - 0.6) / 0.25;
-          speed = 3200 + 6800 * (t2 ** 4);
-        } else {
-          const t3 = (t - 0.85) / 0.15;
-          const expo = Math.min(1, Math.pow(2, 12 * t3) / 4096);
-          speed = 10000 + 25000 * expo;
-        }
-
-        // Optimized motion blur - less aggressive fade
-        ctx.fillStyle = 'rgba(0,0,0,0.2)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.globalCompositeOperation = 'lighter';
-
-        // Batch drawing operations
-        ctx.shadowColor = 'rgba(200,220,255,0.9)';
-
-        for (let i = 0; i < stars.length; i++) {
-          const s = stars[i];
-
-          const prevZ = s.z;
-          const prevX = cx + (s.x * fov) / prevZ;
-          const prevY = cy + (s.y * fov) / prevZ;
-
-          s.z -= speed * dt;
-
-          if (s.z < minZ) {
-            stars[i] = newStar();
-            continue;
-          }
-
-          const sx = cx + (s.x * fov) / s.z;
-          const sy = cy + (s.y * fov) / s.z;
-
-          if (sx < -200 || sx > canvas.width + 200 || sy < -200 || sy > canvas.height + 200) {
-            stars[i] = newStar();
-            continue;
-          }
-
-          const velocity = Math.hypot(sx - prevX, sy - prevY);
-          const depthNorm = 1 - s.z / depth;
-          
-          // Thicker, brighter trails at high speed
-          const width = Math.min(10, 1 + velocity * 0.06 + depthNorm * 5);
-          const alpha = Math.min(1, 0.5 + depthNorm * 0.7 + velocity * 0.002);
-
-          // Draw trail line
-          ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
-          ctx.shadowBlur = 12 + depthNorm * 40 + velocity * 0.08;
-          ctx.lineWidth = width;
-          ctx.beginPath();
-          ctx.moveTo(prevX, prevY);
-          ctx.lineTo(sx, sy);
-          ctx.stroke();
-
-          // Bright core dot for nearby stars
-          if (depthNorm > 0.6) {
-            ctx.fillStyle = `rgba(255,255,255,${alpha * 1.3})`;
-            ctx.shadowBlur = 20;
-            ctx.beginPath();
-            ctx.arc(sx, sy, width * 0.5, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
-
-        // Pre-supernova glow
-        const timeLeft = starfieldMs - elapsed;
-        if (timeLeft < 2000) {
-          const p = 1 - timeLeft / 2000;
-          ctx.globalCompositeOperation = 'lighter';
-          const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(cx, cy) * 1.2);
-          grad.addColorStop(0, `rgba(255,220,160,${p * 0.8})`);
-          grad.addColorStop(0.5, `rgba(255,180,100,${p * 0.4})`);
-          grad.addColorStop(1, 'rgba(0,0,0,0)');
-          ctx.fillStyle = grad;
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-
-        if (elapsed < starfieldMs && state.running) {
-          rafId = requestAnimationFrame(drawStarfield);
-        } else if (state.running) {
-          state.phase = 'supernova';
-          state.start = null;
-          rafId = requestAnimationFrame(drawSupernova);
-        }
-      }
-
-      function drawSupernova(ts) {
-        if (!state.start) { state.start = ts; state.last = ts; }
-        const p = Math.min(1, (ts - state.start) / supernovaMs);
-
-        // Clear trails with fade
-        ctx.fillStyle = 'rgba(0,0,0,0.35)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Multi-layered supernova core
-        const maxR = Math.max(cx, cy) * 2.8;
-        const coreR = maxR * (0.1 + p * 1.4);
-        
-        const peakBrightness = p > 0.7 ? Math.min(1, (p - 0.7) / 0.3) : 0;
-        
-        // Color temperature shift
-        let coreColor, midColor, outerColor;
-        if (p < 0.3) {
-          coreColor = [200, 220, 255];
-          midColor = [180, 200, 255];
-          outerColor = [255, 220, 180];
-        } else if (p < 0.6) {
-          coreColor = [255, 255, 255];
-          midColor = [255, 245, 220];
-          outerColor = [255, 200, 150];
-        } else {
-          const t = (p - 0.6) / 0.4;
-          coreColor = [255, 255 - t * 55, 255 - t * 155];
-          midColor = [255, 220 - t * 70, 180 - t * 80];
-          outerColor = [255, 150 - t * 50, 100 - t * 50];
-        }
-
-        const coreAlpha = Math.min(1, 0.85 + peakBrightness * 0.5);
-
-        // Layer 1: Inner core
-        ctx.globalCompositeOperation = 'source-over';
-        const innerGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 0.25);
-        innerGrad.addColorStop(0, `rgba(${coreColor[0]},${coreColor[1]},${coreColor[2]},${coreAlpha})`);
-        innerGrad.addColorStop(0.7, `rgba(${midColor[0]},${midColor[1]},${midColor[2]},${coreAlpha * 0.8})`);
-        innerGrad.addColorStop(1, `rgba(${midColor[0]},${midColor[1]},${midColor[2]},0)`);
-        ctx.fillStyle = innerGrad;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Layer 2: Mid layer
-        const midGrad = ctx.createRadialGradient(cx, cy, coreR * 0.2, cx, cy, coreR * 0.6);
-        midGrad.addColorStop(0, `rgba(${midColor[0]},${midColor[1]},${midColor[2]},${0.7 - p * 0.3})`);
-        midGrad.addColorStop(0.5, `rgba(${outerColor[0]},${outerColor[1]},${outerColor[2]},${0.6 - p * 0.4})`);
-        midGrad.addColorStop(1, `rgba(${outerColor[0]},${outerColor[1]},${outerColor[2]},0)`);
-        ctx.fillStyle = midGrad;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Layer 3: Outer shell
-        const outerGrad = ctx.createRadialGradient(cx, cy, coreR * 0.5, cx, cy, coreR);
-        outerGrad.addColorStop(0, `rgba(${outerColor[0]},${outerColor[1]},${outerColor[2]},${0.4 - p * 0.3})`);
-        outerGrad.addColorStop(0.4, `rgba(255,180,100,${0.3 - p * 0.25})`);
-        outerGrad.addColorStop(0.8, `rgba(200,100,50,${0.15 - p * 0.15})`);
-        outerGrad.addColorStop(1, 'rgba(0,0,0,1)');
-        ctx.fillStyle = outerGrad;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Shockwave rings (reduced for performance)
-        const shockwaveCount = 2;
-        for (let i = 0; i < shockwaveCount; i++) {
-          const offset = i * 0.2;
-          const shockP = Math.max(0, (p - offset) / (1 - offset));
-          if (shockP > 0 && shockP < 0.8) {
-            const ringR = coreR * (0.6 + shockP * 0.6);
-            const ringThickness = 25 + shockP * 60;
-            const ringAlpha = (0.5 - shockP * 0.5) * (1 - offset * 0.5);
-            
-            ctx.globalCompositeOperation = 'lighter';
-            ctx.strokeStyle = `rgba(255,220,180,${ringAlpha})`;
-            ctx.lineWidth = ringThickness;
-            ctx.shadowColor = `rgba(255,200,150,${ringAlpha * 0.8})`;
-            ctx.shadowBlur = 35;
-            ctx.beginPath();
-            ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
-            ctx.stroke();
-          }
-        }
-
-        // Particle debris (reduced count)
-        if (p > 0.3) {
-          const particleP = (p - 0.3) / 0.7;
-          const particleCount = 100; // Reduced from 150
-          ctx.globalCompositeOperation = 'lighter';
-          ctx.shadowBlur = 0;
-          
-          for (let i = 0; i < particleCount; i++) {
-            const angle = (i / particleCount) * Math.PI * 2 + particleP * 0.5;
-            const dist = coreR * (0.4 + particleP * 0.8) * (0.8 + Math.sin(i * 13.7) * 0.2);
-            const px = cx + Math.cos(angle) * dist;
-            const py = cy + Math.sin(angle) * dist;
-            const size = (2 + Math.sin(i * 7.3) * 2) * (1 - particleP * 0.7);
-            const alpha = (0.6 - particleP * 0.5) * (0.7 + Math.sin(i * 5.1) * 0.3);
-            
-            const hue = 30 + particleP * 30;
-            ctx.fillStyle = `hsla(${hue}, 100%, 70%, ${alpha})`;
-            ctx.beginPath();
-            ctx.arc(px, py, size, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
-
-        // Peak bloom
-        if (peakBrightness > 0) {
-          ctx.globalCompositeOperation = 'lighter';
-          const bloomGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 0.8);
-          bloomGrad.addColorStop(0, `rgba(255,255,255,${peakBrightness * 0.95})`);
-          bloomGrad.addColorStop(0.3, `rgba(255,255,255,${peakBrightness * 0.6})`);
-          bloomGrad.addColorStop(1, 'rgba(255,255,255,0)');
-          ctx.fillStyle = bloomGrad;
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          
-          if (peakBrightness > 0.8) {
-            const flashIntensity = (peakBrightness - 0.8) / 0.2;
-            ctx.fillStyle = `rgba(255,255,255,${flashIntensity * 0.4})`;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-          }
-        }
-
-        // Radial rays (reduced count)
-        if (p > 0.2 && p < 0.9) {
-          const rayP = (p - 0.2) / 0.7;
-          const rayCount = 16; // Reduced from 24
-          ctx.globalCompositeOperation = 'lighter';
-          ctx.shadowBlur = 0;
-          
-          for (let i = 0; i < rayCount; i++) {
-            const angle = (i / rayCount) * Math.PI * 2 + rayP * 0.3;
-            const rayLength = coreR * (0.9 + Math.sin(i * 3.7) * 0.3);
-            const rayWidth = 6 + Math.sin(i * 5.3) * 5;
-            const alpha = (0.3 - rayP * 0.25) * (0.6 + Math.sin(i * 2.1) * 0.4);
-            
-            ctx.strokeStyle = `rgba(255,240,200,${alpha})`;
-            ctx.lineWidth = rayWidth;
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.lineTo(
-              cx + Math.cos(angle) * rayLength,
-              cy + Math.sin(angle) * rayLength
-            );
-            ctx.stroke();
-          }
-        }
-
-        if (p < 1 && state.running) {
-          rafId = requestAnimationFrame(drawSupernova);
-        } else if (state.running) {
+        // Trigger explosion flash near the very end
+        if (!exploded && warp.duration - warp.currentTime <= EXPLOSION_LEAD) {
+          exploded = true;
+          try { warp.pause(); } catch {}
           whiteFlashThenReturn();
         }
+      }, 100);
+    });
+
+    warp.addEventListener('ended', () => {
+      if (!exploded) {
+        exploded = true;
+        whiteFlashThenReturn();
       }
+    });
 
-      function cleanup() {
-        state.running = false;
-        if (rafId) cancelAnimationFrame(rafId);
-        window.removeEventListener('resize', resize);
-        overlay.classList.remove('active');
-        overlay.innerHTML = '';
-      }
+    warp.addEventListener('error', () => {
+      whiteFlashThenReturn();
+    });
+  }
 
-      function whiteFlashThenReturn() {
-        // White flash overlay
-        const flash = document.createElement('div');
-        flash.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:12000;pointer-events:none;opacity:1';
-        document.body.appendChild(flash);
+  // Ensure video attempts to play
+  document.addEventListener('DOMContentLoaded', () => {
+    const v = $('#bg-video');
+    if (v) v.play().catch(() => document.body.addEventListener('click', () => v.play(), { once: true }));
+    initPanelToggles();
+    initControls();
+    loadTheme();
+  });
 
-        cleanup();
-
-        // Immediately restore page
-        const blackout = $('#blackout');
-        const video = $('#bg-video');
-        const videoBg = $('#videoBg');
-
-        requestAnimationFrame(() => {
-          // Remove blackout instantly
-          if (blackout) {
-            blackout.style.transition = 'none';
-            blackout.classList.remove('visible', 'show');
-            blackout.style.opacity = '0';
-            blackout.style.display = 'none';
-            // Force reflow
-            void blackout.offsetHeight;
-            // Restore transition
-            setTimeout(() => {
-              blackout.style.transition = '';
-              blackout.style.opacity = '';
-              blackout.style.display = '';
-            }, 50);
-          }
-          
-          // Restore video
-          if (videoBg) videoBg.style.opacity = '1';
-          if (video) {
-            video.currentTime = 0; // Optional: restart from beginning
-            video.play().catch(() => {});
-          }
-
-          // Fade out white flash
-          setTimeout(() => {
-            flash.style.transition = 'opacity 0.3s ease-out';
-            flash.style.opacity = '0';
-            setTimeout(() => {
-              flash.remove();
-              isCinematic = false;
-            }, 300);
-          }, whiteFlashMs);
-        });
-      }
-
-      cancelWarp = cleanup;
-      rafId = requestAnimationFrame(drawStarfield);
-    }
-
-    // Panels: expand/collapse on click
-    function initPanelToggles() {
-      $$('.panel').forEach(panel => {
-        const body = panel.querySelector('.body');
-        panel.addEventListener('click', () => togglePanel(panel, body));
-        panel.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            togglePanel(panel, body);
-          }
-        });
-      });
-    }
-
-    function togglePanel(panel, body) {
-      const open = panel.getAttribute('aria-expanded') === 'true';
-      panel.setAttribute('aria-expanded', String(!open));
-      if (open) {
-        body.hidden = true;
-      } else {
-        body.hidden = false;
-        panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }
-
-    // Theme toggle with 5 themes
-    const themes = ['neon', 'ocean', 'forest', 'sunset', 'purple'];
-    let currentThemeIndex = 0;
-
-    function loadTheme() {
-      const stored = localStorage.getItem('site-theme') || 'neon';
-      currentThemeIndex = themes.indexOf(stored);
-      if (currentThemeIndex === -1) currentThemeIndex = 0;
-      document.body.setAttribute('data-theme', themes[currentThemeIndex]);
-    }
-
-    function toggleTheme() {
-      currentThemeIndex = (currentThemeIndex + 1) % themes.length;
-      const newTheme = themes[currentThemeIndex];
-      document.body.setAttribute('data-theme', newTheme);
-      localStorage.setItem('site-theme', newTheme);
-
-      const flash = document.createElement('div');
-      flash.style.cssText = 'position:fixed;inset:0;background:var(--accent-cyan);opacity:0.25;z-index:8500;pointer-events:none';
-      document.body.appendChild(flash);
-      flash.animate([{opacity: 0.25}, {opacity: 0}], {duration: 350});
-      setTimeout(() => flash.remove(), 360);
-    }
-
-    // Enhanced mouse trail
-    let mouseTrailEnabled = false;
-    let trailDots = [];
-    const trailCount = 25;
-    let mousePos = {x: 0, y: 0};
-
-    function enableMouseTrail() {
-      if (mouseTrailEnabled) return;
-      mouseTrailEnabled = true;
-      const core = $('#cursorCore');
-      core.style.display = 'block';
-
-      for (let i = 0; i < trailCount; i++) {
-        const d = document.createElement('div');
-        d.className = 'cursor-trail-dot';
-        const size = 12 - (i * 0.4);
-        d.style.width = `${size}px`;
-        d.style.height = `${size}px`;
-        const hue = (i * 15) % 360;
-        d.style.background = `hsl(${hue}, 100%, 60%)`;
-        d.style.boxShadow = `0 0 ${size * 2}px hsl(${hue}, 100%, 60%)`;
-        d.style.left = '0px';
-        d.style.top = '0px';
-        document.body.appendChild(d);
-        trailDots.push({el: d, x: 0, y: 0});
-      }
-
-      document.addEventListener('mousemove', onMouse);
-      animateTrail();
-    }
-
-    function disableMouseTrail() {
-      if (!mouseTrailEnabled) return;
-      mouseTrailEnabled = false;
-      $('#cursorCore').style.display = 'none';
-      trailDots.forEach(d => d.el.remove());
-      trailDots = [];
-      document.removeEventListener('mousemove', onMouse);
-    }
-
-    function onMouse(e) {
-      mousePos.x = e.clientX;
-      mousePos.y = e.clientY;
-    }
-
-    function animateTrail() {
-      if (!mouseTrailEnabled) return;
-
-      const core = $('#cursorCore');
-      core.style.left = mousePos.x + 'px';
-      core.style.top = mousePos.y + 'px';
-
-      trailDots.forEach((dot, idx) => {
-        const target = idx === 0 ? mousePos : trailDots[idx - 1];
-        dot.x += (target.x - dot.x) * 0.3;
-        dot.y += (target.y - dot.y) * 0.3;
-        dot.el.style.left = dot.x + 'px';
-        dot.el.style.top = dot.y + 'px';
-        dot.el.style.opacity = String(1 - (idx * 0.03));
-      });
-
-      requestAnimationFrame(animateTrail);
-    }
-
-    // Controls wiring + keyboard shortcuts
-    function initControls() {
-      $('#themeToggleBtn').addEventListener('click', toggleTheme);
-      $('#mouseTrailToggleBtn').addEventListener('click', () => {
-        if (mouseTrailEnabled) {
-          disableMouseTrail();
-          $('#mouseTrailToggleBtn').textContent = 'Mouse Trail';
-        } else {
-          enableMouseTrail();
-          $('#mouseTrailToggleBtn').textContent = 'Mouse Trail (On)';
+  // Panels: expand/collapse on click
+  function initPanelToggles() {
+    $$('.panel').forEach(panel => {
+      const body = panel.querySelector('.body');
+      panel.addEventListener('click', () => togglePanel(panel, body));
+      panel.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          togglePanel(panel, body);
         }
       });
+    });
+  }
 
-      // Secret button triggers cinematic
-      $('#hiddenCelebrate').addEventListener('click', startCinematic);
+  function togglePanel(panel, body) {
+    const open = panel.getAttribute('aria-expanded') === 'true';
+    panel.setAttribute('aria-expanded', String(!open));
+    if (open) {
+      body.hidden = true;
+    } else {
+      body.hidden = false;
+      panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
 
-      document.addEventListener('keydown', (e) => {
-        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) return;
-        if (e.key.toLowerCase() === 't') { toggleTheme(); flashBtn('#themeToggleBtn'); }
-        if (e.key.toLowerCase() === 'm') { $('#mouseTrailToggleBtn').click(); flashBtn('#mouseTrailToggleBtn'); }
-      });
+  // Theme toggle with 5 themes
+  const themes = ['neon', 'ocean', 'forest', 'sunset', 'purple'];
+  let currentThemeIndex = 0;
 
-      function flashBtn(sel) {
-        const b = $(sel);
-        if (!b) return;
-        b.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.06)' }, { transform: 'scale(1)' }], { duration: 240 });
-      }
+  function loadTheme() {
+    const stored = localStorage.getItem('site-theme') || 'neon';
+    currentThemeIndex = themes.indexOf(stored);
+    if (currentThemeIndex === -1) currentThemeIndex = 0;
+    document.body.setAttribute('data-theme', themes[currentThemeIndex]);
+  }
+
+  function toggleTheme() {
+    currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+    const newTheme = themes[currentThemeIndex];
+    document.body.setAttribute('data-theme', newTheme);
+    localStorage.setItem('site-theme', newTheme);
+
+    const flash = document.createElement('div');
+    flash.style.cssText = 'position:fixed;inset:0;background:var(--accent-cyan);opacity:0.25;z-index:8500;pointer-events:none';
+    document.body.appendChild(flash);
+    flash.animate([{opacity: 0.25}, {opacity: 0}], {duration: 350});
+    setTimeout(() => flash.remove(), 360);
+  }
+
+  // Enhanced mouse trail
+  let mouseTrailEnabled = false;
+  let trailDots = [];
+  const trailCount = 25;
+  let mousePos = {x: 0, y: 0};
+
+  function enableMouseTrail() {
+    if (mouseTrailEnabled) return;
+    mouseTrailEnabled = true;
+    const core = $('#cursorCore');
+    core.style.display = 'block';
+
+    for (let i = 0; i < trailCount; i++) {
+      const d = document.createElement('div');
+      d.className = 'cursor-trail-dot';
+      const size = 12 - (i * 0.4);
+      d.style.width = `${size}px`;
+      d.style.height = `${size}px`;
+      const hue = (i * 15) % 360;
+      d.style.background = `hsl(${hue}, 100%, 60%)`;
+      d.style.boxShadow = `0 0 ${size * 2}px hsl(${hue}, 100%, 60%)`;
+      d.style.left = '0px';
+      d.style.top = '0px';
+      document.body.appendChild(d);
+      trailDots.push({el: d, x: 0, y: 0});
     }
 
-    // expose helpers for dev console
-    window.Echoing = {
-      toggleTheme, enableMouseTrail, disableMouseTrail, startCinematic, warpSpeed
-    };
+    document.addEventListener('mousemove', onMouse);
+    animateTrail();
+  }
+
+  function disableMouseTrail() {
+    if (!mouseTrailEnabled) return;
+    mouseTrailEnabled = false;
+    $('#cursorCore').style.display = 'none';
+    trailDots.forEach(d => d.el.remove());
+    trailDots = [];
+    document.removeEventListener('mousemove', onMouse);
+  }
+
+  function onMouse(e) {
+    mousePos.x = e.clientX;
+    mousePos.y = e.clientY;
+  }
+
+  function animateTrail() {
+    if (!mouseTrailEnabled) return;
+
+    const core = $('#cursorCore');
+    core.style.left = mousePos.x + 'px';
+    core.style.top = mousePos.y + 'px';
+
+    trailDots.forEach((dot, idx) => {
+      const target = idx === 0 ? mousePos : trailDots[idx - 1];
+      dot.x += (target.x - dot.x) * 0.3;
+      dot.y += (target.y - dot.y) * 0.3;
+      dot.el.style.left = dot.x + 'px';
+      dot.el.style.top = dot.y + 'px';
+      dot.el.style.opacity = String(1 - (idx * 0.03));
+    });
+
+    requestAnimationFrame(animateTrail);
+  }
+
+  // Controls wiring + keyboard shortcuts
+  function initControls() {
+    $('#themeToggleBtn').addEventListener('click', toggleTheme);
+    $('#mouseTrailToggleBtn').addEventListener('click', () => {
+      if (mouseTrailEnabled) {
+        disableMouseTrail();
+        $('#mouseTrailToggleBtn').textContent = 'Mouse Trail';
+      } else {
+        enableMouseTrail();
+        $('#mouseTrailToggleBtn').textContent = 'Mouse Trail (On)';
+      }
+    });
+
+    // Secret button triggers cinematic
+    $('#hiddenCelebrate').addEventListener('click', startCinematic);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) return;
+      if (e.key.toLowerCase() === 't') { toggleTheme(); flashBtn('#themeToggleBtn'); }
+      if (e.key.toLowerCase() === 'm') { $('#mouseTrailToggleBtn').click(); flashBtn('#mouseTrailToggleBtn'); }
+    });
+
+    function flashBtn(sel) {
+      const b = $(sel);
+      if (!b) return;
+      b.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.06)' }, { transform: 'scale(1)' }], { duration: 240 });
+    }
+  }
+
+  // expose helpers for dev console
+  window.Echoing = {
+    toggleTheme, enableMouseTrail, disableMouseTrail, startCinematic
+  };
   </script>
 </body>
 </html>
