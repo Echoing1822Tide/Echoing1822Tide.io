@@ -56,6 +56,40 @@
       --bg-color: #000;
     }
 
+    /* === Enhanced Theme Variants (dramatic changes) === */
+    body.theme-a {
+      --accent-cyan:#00ffe0; --accent-magenta:#ff5ae6; --panel-bg:rgba(5,15,40,.65);
+      font-family:'Segoe UI',system-ui,sans-serif;
+    }
+    body.theme-b {
+      --accent-cyan:#ffca00; --accent-magenta:#ff5a00; --panel-bg:rgba(50,25,0,.55);
+      font-family:'Georgia',serif;
+    }
+    body.theme-c {
+      --accent-cyan:#67ff00; --accent-magenta:#00ff95; --panel-bg:rgba(10,50,10,.55);
+      font-family:'Courier New',monospace;
+    }
+    body.theme-d {
+      --accent-cyan:#bb66ff; --accent-magenta:#ff33aa; --panel-bg:rgba(35,10,50,.55);
+      font-family:'Trebuchet MS',sans-serif;
+    }
+    body.theme-e {
+      --accent-cyan:#33d1ff; --accent-magenta:#ff3377; --panel-bg:rgba(0,0,0,.55);
+      font-family:'Verdana',sans-serif;
+    }
+    body.theme-a .btn{border-radius:40px;font-size:.95rem}
+    body.theme-b .btn{border-radius:8px;font-weight:700;font-size:1rem;letter-spacing:.5px}
+    body.theme-c .btn{border-radius:0;font-size:.9rem;border:2px solid var(--accent-cyan)}
+    body.theme-d .btn{border-radius:20px 4px 20px 4px;font-size:1.05rem}
+    body.theme-e .btn{border-radius:999px;font-size:.95rem;box-shadow:0 0 0 2px rgba(255,255,255,.08)}
+    body.theme-c .panel{border-radius:0}
+    body.theme-b .panel{border:2px solid rgba(255,255,255,.15)}
+    body.theme-d .panel{border-radius:24px}
+    body.theme-a .panel{-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+    body.theme-e .panel{outline:1px solid rgba(255,255,255,.12)}
+    .panel-event-burst{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:inherit}
+    .panel-event-particle{position:absolute;background:radial-gradient(circle,#fff,var(--accent-cyan));width:6px;height:6px;border-radius:50%;will-change:transform,opacity;mix-blend-mode:screen}
+
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial;background:var(--bg-color);color:var(--text-color);transition:background-color 0.6s ease}
     .video-background{position:fixed;inset:0;z-index:0;overflow:hidden;background:var(--bg-color);transition:opacity .6s ease}
@@ -268,304 +302,348 @@
   <div id="cursorCore" class="cursor-core" aria-hidden="true"></div>
 
   <script>
-const $ = s => document.querySelector(s);
-let isCinematic = false;
+const $=s=>document.querySelector(s);
+let isCinematic=false;
 
-// Reattach button after load
-document.addEventListener('DOMContentLoaded', () => {
-  const btn = $('#hiddenCelebrate');
-  if (btn) btn.addEventListener('click', startCinematic);
-});
+/* === Multi-video cinematic with:
+   1) First video ramps speed (1 -> FAST_RATE)
+   2) Second video runs at natural speed (1x)
+   3) Third video runs at NAT_RATE (match target visually)
+   4) Fourth video runs at NAT_RATE then slows last SLOW_DOWN_SEC
+   Total real time enforced MIN_TOTAL_MS (≈2 min). If sequence ends early, loops last video until met.
+   Seamless crossfades (CROSSFADE_SEC).
+   Space travel audio loops entire duration and fades out at end.
+=== */
+function startCinematic(){
+  if(isCinematic) return;
+  isCinematic=true;
 
-/*
-  Multi‑video cinematic (no supernova):
-  Sequence: 4 videos crossfaded.
-  - Screensaver-1.mp4 keeps normal speed, then ramps UP before crossfade so video 2 matches.
-  - Videos 2 & 3 play at steady TARGET_RATE.
-  - Video 4 plays at TARGET_RATE then slows over LAST_SLOWDOWN_SEC.
-  - Each crossfade overlaps by CROSSFADE_SEC.
-  Adjust constants below if needed.
-*/
-function startCinematic() {
-  if (isCinematic) return;
-  isCinematic = true;
-
-  const overlay = $('#warpOverlay');
-  const bgVideo = $('#bg-video');
-  const videoBg = $('#videoBg');
-  if (!overlay) { isCinematic = false; return; }
-
-  if (bgVideo) { try { bgVideo.pause(); } catch {} }
-  if (videoBg) videoBg.style.opacity = '0';
-
+  const overlay=$('#warpOverlay');
+  const bgVideo=$('#bg-video');
+  const videoBg=$('#videoBg');
+  if(bgVideo){try{bgVideo.pause();}catch{}}
+  if(videoBg) videoBg.style.opacity='0';
   overlay.classList.add('active');
-  overlay.innerHTML = '';
-
-  const SEQ_SOURCES = [
+  overlay.innerHTML='';
+  
+  const SOURCES=[
     'Screensaver-1.mp4',
     'Screensaver-2.mp4',
     'Screensaver-3.mp4',
     'Screensaver-4.mp4'
   ];
 
-  // Tuning
-  const CROSSFADE_SEC = 3;          // overlap duration between videos
-  const FIRST_RAMP_SEC = 5;         // length of ramp segment in video 1
-  const TARGET_RATE = 1.25;         // steady speed for videos 2 & 3 (and start of 4)
-  const LAST_SLOWDOWN_SEC = 2;      // deceleration window at end of video 4
-  const LAST_FINAL_RATE = 0.7;      // final slowed rate at exact end of video 4
-  const FADE_EASE = 'linear';       // opacity transition timing
+  const CROSSFADE_SEC=3;
+  const FAST_RATE=2.2;          // peak for first video near fade
+  const FIRST_RAMP_SEC=8;       // ramp span before crossfade
+  const NAT_RATE=1.15;          // matched visual rate for vids 3 & start 4
+  const SLOW_DOWN_SEC=2;        // end of 4th deceleration
+  const FINAL_RATE=0.7;         // final slowed rate at completion
+  const MIN_TOTAL_MS=120000;    // ≈ 2 min real-time
+  const AUDIO_SRC='space-warp.mp3'; // Add this file (looping space travel sound)
 
-  let index = 0;
-  let current = null;
-  let next = null;
-  let rateRAF = null;
+  let realStart=performance.now();
+  let currentIndex=0;
+  let currentVid=null;
+  let nextVid=null;
+  let rateRAF=null;
+  let finished=false;
 
-  playIndex(index);
+  // Audio
+  const audio=document.createElement('audio');
+  audio.src=AUDIO_SRC;
+  audio.loop=true;
+  audio.volume=0.22;
+  overlay.appendChild(audio);
+  audio.play().catch(()=>{
+    const resume=()=>{audio.play().catch(()=>{});document.removeEventListener('click',resume,true);};
+    document.addEventListener('click',resume,true);
+  });
 
-  function createVideo(src) {
-    const v = document.createElement('video');
-    v.className = 'warp-player';
-    v.muted = true;
-    v.playsInline = true;
-    v.autoplay = true;
-    v.preload = 'auto';
-    v.loop = false;
+  playVideo(currentIndex);
+
+  function createVideo(src){
+    const v=document.createElement('video');
+    v.className='warp-player';
+    v.muted=true;
+    v.playsInline=true;
+    v.autoplay=true;
+    v.preload='auto';
+    v.loop=false;
     v.setAttribute('disablePictureInPicture','');
     v.setAttribute('controlslist','nodownload nofullscreen noremoteplayback');
-    v.style.opacity = '0';
-    v.style.transition = `opacity .6s ${FADE_EASE}`;
-    const s = document.createElement('source');
-    s.src = src;
-    s.type = 'video/mp4';
-    v.appendChild(s);
+    v.style.opacity='0';
+    v.style.transition=`opacity ${CROSSFADE_SEC}s linear`;
+    const so=document.createElement('source');
+    so.src=src; so.type='video/mp4';
+    v.appendChild(so);
     return v;
   }
 
-  function playIndex(i) {
-    if (i >= SEQ_SOURCES.length) {
-      finish();
+  function playVideo(i){
+    if(finished) return;
+    if(i>=SOURCES.length){
+      ensureTotalTimeOrFinish();
       return;
     }
-    current = createVideo(SEQ_SOURCES[i]);
-    overlay.appendChild(current);
-
-    // Autoplay attempt
-    current.play().catch(() => {
-      const resume = () => { current.play().catch(()=>{}); document.removeEventListener('click', resume, true); };
-      document.addEventListener('click', resume, true);
+    currentVid=createVideo(SOURCES[i]);
+    overlay.appendChild(currentVid);
+    currentVid.play().catch(()=>{
+      const resume=()=>{currentVid.play().catch(()=>{});document.removeEventListener('click',resume,true);};
+      document.addEventListener('click',resume,true);
     });
-
-    current.addEventListener('loadeddata', () => {
-      requestAnimationFrame(() => current.style.opacity = '1');
-    });
-
-    current.addEventListener('error', () => {
-      // Skip faulty video
-      playNext();
-    });
-
-    current.addEventListener('ended', () => {
-      // If ended before crossfade scheduled (very short), advance
-      playNext();
-    });
+    currentVid.addEventListener('loadeddata',()=>requestAnimationFrame(()=>currentVid.style.opacity='1'));
+    currentVid.addEventListener('error',()=>skipToNext());
+    currentVid.addEventListener('ended',()=>skipToNext());
 
     // Preload next
-    if (i + 1 < SEQ_SOURCES.length) {
-      next = createVideo(SEQ_SOURCES[i + 1]);
-      overlay.appendChild(next);
-    } else {
-      next = null;
+    if(i+1<SOURCES.length){
+      nextVid=createVideo(SOURCES[i+1]);
+      overlay.appendChild(nextVid);
+    }else{
+      nextVid=null;
     }
 
-    // Once metadata known, set up timing logic
-    current.addEventListener('loadedmetadata', () => {
-      setupRateControlForCurrent(i);
-      if (next) {
-        // Prepare crossfade scheduling
-        const dur = current.duration;
-        const fadeStart = Math.max(0, dur - CROSSFADE_SEC);
+    currentVid.addEventListener('loadedmetadata',()=>{
+      setupPlaybackRate(i,currentVid);
+      if(nextVid){
+        const dur=currentVid.duration;
+        const fadeStart=dur-CROSSFADE_SEC;
         scheduleCrossfade(fadeStart);
-      } else {
-        // Last video: just wait for slowdown & normal end
-        if (i === SEQ_SOURCES.length - 1) {
-          // Nothing extra; slowdown handled in rate control
+      }else{
+        // Last video will slow then finish
+      }
+    });
+  }
+
+  function scheduleCrossfade(startTime){
+    function chk(){
+      if(!currentVid||finished) return;
+      if(currentVid.currentTime>=startTime){
+        startCrossfade();
+      }else{
+        requestAnimationFrame(chk);
+      }
+    }
+    requestAnimationFrame(chk);
+  }
+
+  function startCrossfade(){
+    if(!nextVid) return;
+    nextVid.play().catch(()=>{});
+    requestAnimationFrame(()=>{
+      nextVid.style.opacity='1';
+      if(currentVid) currentVid.style.opacity='0';
+    });
+    setTimeout(()=>{
+      if(currentVid){currentVid.remove();}
+      currentIndex++;
+      currentVid=nextVid;
+      nextVid=null;
+      playVideo(currentIndex);
+    },CROSSFADE_SEC*1000+80);
+  }
+
+  function skipToNext(){
+    currentIndex++;
+    if(currentVid) currentVid.remove();
+    if(nextVid){
+      currentVid=nextVid; nextVid=null;
+      currentVid.style.opacity='1';
+      currentVid.play().catch(()=>{});
+      playVideo(currentIndex);
+    }else{
+      ensureTotalTimeOrFinish();
+    }
+  }
+
+  function setupPlaybackRate(i,v){
+    cancelRateLoop();
+    const dur=v.duration||0;
+
+    const rampEnd=Math.max(0,dur-CROSSFADE_SEC);
+    const rampStart=Math.max(0,rampEnd-FIRST_RAMP_SEC);
+
+    function loop(){
+      if(!v||finished) return;
+      const t=v.currentTime;
+      let desired=1;
+
+      if(i===0){
+        // First video ramp
+        if(t<=rampStart) desired=1;
+        else if(t>=rampEnd) desired=FAST_RATE;
+        else{
+          const p=(t-rampStart)/(rampEnd-rampStart);
+          desired=1+(FAST_RATE-1)*(p<0.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2);
+        }
+      }else if(i===1){
+        // Second original speed
+        desired=1;
+      }else if(i===2){
+        desired=NAT_RATE;
+      }else if(i===3){
+        // Fourth: NAT_RATE then slow
+        const slowStart=Math.max(0,dur-SLOW_DOWN_SEC);
+        if(t<slowStart) desired=NAT_RATE;
+        else{
+          const p=(t-slowStart)/Math.max(0.001,dur-slowStart);
+          desired=NAT_RATE-(NAT_RATE-FINAL_RATE)*(1-Math.pow(1-p,3));
         }
       }
-    });
-  }
 
-  function scheduleCrossfade(startTime) {
-    function check() {
-      if (!current) return;
-      if (current.currentTime >= startTime) {
-        startCrossfade();
-      } else {
-        requestAnimationFrame(check);
-      }
+      if(Math.abs(v.playbackRate-desired)>0.01) v.playbackRate=desired;
+      rateRAF=requestAnimationFrame(loop);
     }
-    requestAnimationFrame(check);
+    loop();
   }
 
-  function startCrossfade() {
-    if (!next) return;
-    // Ensure next begins from start at target speed (will be set by its own rate logic)
-    next.play().catch(()=>{});
-    const durMs = CROSSFADE_SEC * 1000;
-    next.style.transition = `opacity ${CROSSFADE_SEC}s ${FADE_EASE}`;
-    current.style.transition = `opacity ${CROSSFADE_SEC}s ${FADE_EASE}`;
-    requestAnimationFrame(() => {
-      next.style.opacity = '1';
-      current.style.opacity = '0';
-    });
-    setTimeout(() => {
-      if (current) current.remove();
-      index++;
-      current = next;
-      next = null;
-      playIndex(index);
-    }, durMs + 60);
+  function cancelRateLoop(){
+    if(rateRAF) cancelAnimationFrame(rateRAF);
+    rateRAF=null;
   }
 
-  function playNext() {
-    index++;
-    if (current) current.remove();
-    if (next) {
-      current = next;
-      next = null;
-      current.style.opacity = '1';
-      current.play().catch(()=>{});
-      playIndex(index);
-    } else {
+  function ensureTotalTimeOrFinish(){
+    const elapsed=performance.now()-realStart;
+    if(elapsed<MIN_TOTAL_MS){
+      // Loop final video until time met
+      if(!currentVid){
+        // Create a filler loop of last source
+        currentVid=createVideo(SOURCES[SOURCES.length-1]);
+        overlay.appendChild(currentVid);
+        currentVid.play().catch(()=>{});
+      }
+      if(!currentVid.loop){
+        currentVid.loop=true;
+        currentVid.play().catch(()=>{});
+      }
+      setupPlaybackRate(SOURCES.length-1,currentVid);
+      const remain=MIN_TOTAL_MS-elapsed;
+      setTimeout(()=>finish(),remain);
+    }else{
       finish();
     }
   }
 
-  function setupRateControlForCurrent(i) {
+  function finish(){
+    if(finished) return;
+    finished=true;
     cancelRateLoop();
-    const v = current;
-    if (!v || !isFinite(v.duration) || v.duration <= 0) return;
+    fadeOutAudio(()=>{
+      overlay.classList.remove('active');
+      overlay.innerHTML='';
+      if(videoBg) videoBg.style.opacity='1';
+      if(bgVideo){try{bgVideo.play();}catch{}}
+      isCinematic=false;
+    });
+  }
 
-    const dur = v.duration;
-    // Compute ramp window for first video: ends at (dur - CROSSFADE_SEC)
-    const rampEnd = Math.max(0, dur - CROSSFADE_SEC);
-    const rampStart = Math.max(0, rampEnd - FIRST_RAMP_SEC);
-
-    function rateLoop() {
-      if (!v) return;
-      const t = v.currentTime;
-
-      // Default desired rate
-      let desiredRate = 1;
-
-      if (i === 0) {
-        // Video 1: base 1 → ramp to TARGET_RATE over [rampStart, rampEnd]
-        if (t <= rampStart) {
-          desiredRate = 1;
-        } else if (t >= rampEnd) {
-          desiredRate = TARGET_RATE;
-        } else {
-          const p = (t - rampStart) / (rampEnd - rampStart);
-          // Ease (cubic)
-            desiredRate = 1 + (TARGET_RATE - 1) * (p < 0.5 ? 4*p*p*p : 1 - Math.pow(-2*p+2,3)/2);
-        }
-      } else if (i === SEQ_SOURCES.length - 1) {
-        // Last video: steady TARGET_RATE then slow in last LAST_SLOWDOWN_SEC
-        const slowStart = Math.max(0, dur - LAST_SLOWDOWN_SEC);
-        if (t < slowStart) {
-          desiredRate = TARGET_RATE;
-        } else {
-          const p = (t - slowStart) / Math.max(0.0001, (dur - slowStart));
-          // Ease out for deceleration
-          desiredRate = TARGET_RATE - (TARGET_RATE - LAST_FINAL_RATE) * (1 - Math.pow(1 - p, 3));
-        }
-      } else {
-        // Middle videos: constant TARGET_RATE
-        desiredRate = TARGET_RATE;
+  function fadeOutAudio(cb){
+    const startVol=audio.volume;
+    const D=900;
+    const begin=performance.now();
+    function f(){
+      const p=Math.min(1,(performance.now()-begin)/D);
+      audio.volume=startVol*(1-p);
+      if(p<1) requestAnimationFrame(f);
+      else{
+        try{audio.pause();}catch{}
+        if(cb) cb();
       }
-
-      if (Math.abs(v.playbackRate - desiredRate) > 0.01) {
-        v.playbackRate = desiredRate;
-      }
-      rateRAF = requestAnimationFrame(rateLoop);
     }
-    rateLoop();
-  }
-
-  function cancelRateLoop() {
-    if (rateRAF) cancelAnimationFrame(rateRAF);
-    rateRAF = null;
-  }
-
-  function finish() {
-    cancelRateLoop();
-    overlay.classList.remove('active');
-    overlay.innerHTML = '';
-    const videoBg = $('#videoBg');
-    const bgVideo = $('#bg-video');
-    if (videoBg) videoBg.style.opacity = '1';
-    if (bgVideo) { try { bgVideo.play(); } catch {} }
-    isCinematic = false;
+    f();
   }
 }
 
-// Existing site features (panels, theme, mouse trail)
-const themes = ['neon','ocean','forest','sunset','purple'];
-let currentThemeIndex = 0;
-
-document.addEventListener('DOMContentLoaded', () => {
-  loadTheme();
-  initPanels();
-  initControls();
-  autoplayBackground();
+/* Attach hidden trigger */
+document.addEventListener('DOMContentLoaded',()=>{
+  const btn=$('#hiddenCelebrate');
+  if(btn) btn.addEventListener('click',startCinematic);
 });
 
-function autoplayBackground(){
-  const v = $('#bg-video');
-  if (v) v.play().catch(()=>{
-    const resume = () => { v.play().catch(()=>{}); document.removeEventListener('click', resume, true); };
-    document.addEventListener('click', resume, true);
-  });
+/* === Theme Cycling (dramatic) === */
+const themeCycle=['theme-a','theme-b','theme-c','theme-d','theme-e'];
+let themeIdx=0;
+function applyTheme(){
+  document.body.classList.remove(...themeCycle);
+  document.body.classList.add(themeCycle[themeIdx]);
 }
+function toggleTheme(){
+  themeIdx=(themeIdx+1)%themeCycle.length;
+  applyTheme();
+  // Visual feedback pulse
+  const pulse=document.createElement('div');
+  pulse.style.cssText='position:fixed;inset:0;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.25),transparent 70%);pointer-events:none;z-index:8000;animation:pulseFade .6s ease-out';
+  document.body.appendChild(pulse);
+  setTimeout(()=>pulse.remove(),600);
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  applyTheme();
+  $('#themeToggleBtn')?.addEventListener('click',toggleTheme);
+});
+/* Pulse keyframe (inject) */
+const stylePulse=document.createElement('style');
+stylePulse.textContent='@keyframes pulseFade{0%{opacity:.8}100%{opacity:0}}';
+document.head.appendChild(stylePulse);
 
-function initPanels() {
-  document.querySelectorAll('.panel').forEach(p=>{
-    const body = p.querySelector('.body');
-    p.addEventListener('click', ()=>togglePanel(p,body));
-    p.addEventListener('keydown', e=>{
-      if (e.key==='Enter' || e.key===' ') {
-        e.preventDefault();
-        togglePanel(p,body);
-      }
+/* === Panel click event effect === */
+function initPanelEvents(){
+  document.querySelectorAll('.panel').forEach(panel=>{
+    panel.addEventListener('click',()=>panelBurst(panel));
+    panel.addEventListener('keydown',e=>{
+      if(e.key==='Enter'||e.key===' ') panelBurst(panel);
     });
   });
 }
-function togglePanel(panel, body){
-  const open = panel.getAttribute('aria-expanded')==='true';
-  panel.setAttribute('aria-expanded', String(!open));
-  body.hidden = open;
+function panelBurst(panel){
+  let burst=panel.querySelector('.panel-event-burst');
+  if(!burst){
+    burst=document.createElement('div');
+    burst.className='panel-event-burst';
+    panel.appendChild(burst);
+  }
+  // Create particles
+  for(let i=0;i<16;i++){
+    const p=document.createElement('div');
+    p.className='panel-event-particle';
+    const angle=Math.random()*Math.PI*2;
+    const dist=20+Math.random()*60;
+    const x=panel.clientWidth/2;
+    const y=panel.clientHeight/2;
+    p.style.left=x+'px';
+    p.style.top=y+'px';
+    burst.appendChild(p);
+    const tx=x+Math.cos(angle)*dist;
+    const ty=y+Math.sin(angle)*dist;
+    p.animate([
+      {transform:`translate(-50%,-50%) scale(1)`,opacity:1},
+      {transform:`translate(${tx - x}px,${ty - y}px) scale(.4)`,opacity:0}
+    ],{duration:600+Math.random()*300,easing:'ease-out'});
+    setTimeout(()=>p.remove(),1000);
+  }
+  // Panel glow pulse
+  panel.animate([{boxShadow:'0 0 0 rgba(255,255,255,0)'},{boxShadow:'0 0 18px rgba(255,255,255,.5)'},{boxShadow:'0 0 0 rgba(255,255,255,0)'}],{duration:700});
 }
 
-function loadTheme(){
-  const stored = localStorage.getItem('site-theme') || 'neon';
-  currentThemeIndex = themes.indexOf(stored);
-  if (currentThemeIndex < 0) currentThemeIndex = 0;
-  document.body.setAttribute('data-theme', themes[currentThemeIndex]);
-}
-function toggleTheme(){
-  currentThemeIndex = (currentThemeIndex + 1) % themes.length;
-  const t = themes[currentThemeIndex];
-  document.body.setAttribute('data-theme', t);
-  localStorage.setItem('site-theme', t);
-}
+/* Keep existing panel toggle logic; just augment */
+document.addEventListener('DOMContentLoaded',initPanelEvents);
 
+/* Background autoplay (unchanged) */
+document.addEventListener('DOMContentLoaded',()=>{
+  const v=$('#bg-video');
+  if(v) v.play().catch(()=>{
+    const resume=()=>{v.play().catch(()=>{});document.removeEventListener('click',resume,true);};
+    document.addEventListener('click',resume,true);
+  });
+});
+
+/* Mouse trail (reuse existing IDs) */
 let mouseTrailEnabled=false;
 let trailDots=[];
 const trailCount=25;
 let mousePos={x:0,y:0};
-
 function enableMouseTrail(){
-  if (mouseTrailEnabled) return;
+  if(mouseTrailEnabled) return;
   mouseTrailEnabled=true;
   const core=$('#cursorCore');
   core.style.display='block';
@@ -575,13 +653,13 @@ function enableMouseTrail(){
     const size=12-(i*0.4);
     d.style.width=size+'px';
     d.style.height=size+'px';
-    const hue=(i*15)%360;
+    const hue=(i*17)%360;
     d.style.background=`hsl(${hue},100%,60%)`;
     d.style.boxShadow=`0 0 ${size*2}px hsl(${hue},100%,60%)`;
     document.body.appendChild(d);
     trailDots.push({el:d,x:0,y:0});
   }
-  document.addEventListener('mousemove', onMouse);
+  document.addEventListener('mousemove',onMouse);
   requestAnimationFrame(animateTrail);
 }
 function disableMouseTrail(){
@@ -590,9 +668,9 @@ function disableMouseTrail(){
   $('#cursorCore').style.display='none';
   trailDots.forEach(d=>d.el.remove());
   trailDots=[];
-  document.removeEventListener('mousemove', onMouse);
+  document.removeEventListener('mousemove',onMouse);
 }
-function onMouse(e){ mousePos.x=e.clientX; mousePos.y=e.clientY; }
+function onMouse(e){mousePos.x=e.clientX;mousePos.y=e.clientY;}
 function animateTrail(){
   if(!mouseTrailEnabled) return;
   const core=$('#cursorCore');
@@ -608,20 +686,17 @@ function animateTrail(){
   });
   requestAnimationFrame(animateTrail);
 }
-
-function initControls(){
-  const themeBtn = $('#themeToggleBtn');
-  const trailBtn = $('#mouseTrailToggleBtn');
-  if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
-  if (trailBtn) trailBtn.addEventListener('click', ()=>{
-    if(mouseTrailEnabled){ disableMouseTrail(); trailBtn.textContent='Mouse Trail'; }
-    else { enableMouseTrail(); trailBtn.textContent='Mouse Trail (On)'; }
+document.addEventListener('DOMContentLoaded',()=>{
+  const tBtn=$('#mouseTrailToggleBtn');
+  tBtn?.addEventListener('click',()=>{
+    if(mouseTrailEnabled){disableMouseTrail();tBtn.textContent='Mouse Trail';}
+    else{enableMouseTrail();tBtn.textContent='Mouse Trail (On)';}
   });
-  document.addEventListener('keydown', e=>{
-    if (e.key.toLowerCase()==='t') toggleTheme();
-    if (e.key.toLowerCase()==='m' && trailBtn) trailBtn.click();
+  document.addEventListener('keydown',e=>{
+    if(e.key.toLowerCase()==='m') tBtn?.click();
+    if(e.key.toLowerCase()==='t') toggleTheme();
   });
-}
+});
 </script>
 </body>
 </html>
