@@ -278,11 +278,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /*
-  Cinematic sequence:
-  1. Warp stars video plays at 1x → ramps to 10x over 60s real time (loops if video shorter).
-  2. Final ~700ms: custom supernova canvas.
-  3. ~150ms white flash.
-  4. Immediate return (background video resumes, overlay cleared).
+  Multi‑video cinematic (no supernova):
+  Sequence: 4 videos crossfaded.
+  - Screensaver-1.mp4 keeps normal speed, then ramps UP before crossfade so video 2 matches.
+  - Videos 2 & 3 play at steady TARGET_RATE.
+  - Video 4 plays at TARGET_RATE then slows over LAST_SLOWDOWN_SEC.
+  - Each crossfade overlaps by CROSSFADE_SEC.
+  Adjust constants below if needed.
 */
 function startCinematic() {
   if (isCinematic) return;
@@ -293,197 +295,332 @@ function startCinematic() {
   const videoBg = $('#videoBg');
   if (!overlay) { isCinematic = false; return; }
 
-  // Dim/pause background
   if (bgVideo) { try { bgVideo.pause(); } catch {} }
   if (videoBg) videoBg.style.opacity = '0';
 
   overlay.classList.add('active');
   overlay.innerHTML = '';
 
-  const WARP_SRC = 'Screensaver-stars.mp4'; // ensure file exists in root
+  const SEQ_SOURCES = [
+    'Screensaver-1.mp4',
+    'Screensaver-2.mp4',
+    'Screensaver-3.mp4',
+    'Screensaver-4.mp4'
+  ];
 
-  const warp = document.createElement('video');
-  warp.className = 'warp-player';
-  warp.muted = true;
-  warp.playsInline = true;
-  warp.autoplay = true;
-  warp.preload = 'auto';
-  warp.loop = false;
-  warp.setAttribute('disablePictureInPicture','');
-  warp.setAttribute('controlslist','nodownload nofullscreen noremoteplayback');
-  const source = document.createElement('source');
-  source.src = WARP_SRC;
-  source.type = 'video/mp4';
-  warp.appendChild(source);
-  overlay.appendChild(warp);
+  // Tuning
+  const CROSSFADE_SEC = 3;          // overlap duration between videos
+  const FIRST_RAMP_SEC = 5;         // length of ramp segment in video 1
+  const TARGET_RATE = 1.25;         // steady speed for videos 2 & 3 (and start of 4)
+  const LAST_SLOWDOWN_SEC = 2;      // deceleration window at end of video 4
+  const LAST_FINAL_RATE = 0.7;      // final slowed rate at exact end of video 4
+  const FADE_EASE = 'linear';       // opacity transition timing
 
-  // Config
-  const MIN_REAL_MS = 60000;
-  const MAX_RATE = 10;
-  const SUPERNOVA_MS = 700;
-  const FLASH_MS = 150;
+  let index = 0;
+  let current = null;
+  let next = null;
+  let rateRAF = null;
 
-  let startTime = performance.now();
-  let rafId = null;
-  let exploded = false;
-  let supernovaStarted = false;
+  playIndex(index);
 
-  warp.play().catch(() => {
-    const resume = () => { warp.play().catch(()=>{}); document.removeEventListener('click', resume, true); };
-    document.addEventListener('click', resume, true);
-  });
+  function createVideo(src) {
+    const v = document.createElement('video');
+    v.className = 'warp-player';
+    v.muted = true;
+    v.playsInline = true;
+    v.autoplay = true;
+    v.preload = 'auto';
+    v.loop = false;
+    v.setAttribute('disablePictureInPicture','');
+    v.setAttribute('controlslist','nodownload nofullscreen noremoteplayback');
+    v.style.opacity = '0';
+    v.style.transition = `opacity .6s ${FADE_EASE}`;
+    const s = document.createElement('source');
+    s.src = src;
+    s.type = 'video/mp4';
+    v.appendChild(s);
+    return v;
+  }
 
-  warp.addEventListener('error', () => triggerExplosion('video-error'));
+  function playIndex(i) {
+    if (i >= SEQ_SOURCES.length) {
+      finish();
+      return;
+    }
+    current = createVideo(SEQ_SOURCES[i]);
+    overlay.appendChild(current);
 
-  warp.addEventListener('ended', () => {
-    if (exploded) return;
-    // Loop until real time met
-    if (performance.now() - startTime < MIN_REAL_MS) {
-      warp.currentTime = 0;
-      warp.play().catch(()=>{});
+    // Autoplay attempt
+    current.play().catch(() => {
+      const resume = () => { current.play().catch(()=>{}); document.removeEventListener('click', resume, true); };
+      document.addEventListener('click', resume, true);
+    });
+
+    current.addEventListener('loadeddata', () => {
+      requestAnimationFrame(() => current.style.opacity = '1');
+    });
+
+    current.addEventListener('error', () => {
+      // Skip faulty video
+      playNext();
+    });
+
+    current.addEventListener('ended', () => {
+      // If ended before crossfade scheduled (very short), advance
+      playNext();
+    });
+
+    // Preload next
+    if (i + 1 < SEQ_SOURCES.length) {
+      next = createVideo(SEQ_SOURCES[i + 1]);
+      overlay.appendChild(next);
     } else {
-      beginSupernova();
-    }
-  });
-
-  // Start ramp after metadata (or fallback)
-  let metadataReady = false;
-  warp.addEventListener('loadedmetadata', () => {
-    metadataReady = true;
-    animate();
-  });
-  setTimeout(()=>{ if (!metadataReady) animate(); }, 3000); // fallback
-
-  function animate() {
-    if (exploded || supernovaStarted) return;
-    const now = performance.now();
-    const realElapsed = now - startTime;
-    const progress = Math.min(1, realElapsed / MIN_REAL_MS);
-    // Ease in-out cubic
-    const eased = progress < 0.5
-      ? 4 * progress * progress * progress
-      : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-    const rate = 1 + (MAX_RATE - 1) * eased;
-    if (warp.playbackRate !== rate) warp.playbackRate = rate;
-
-    // Ready to start supernova after full minute
-    if (!supernovaStarted && progress >= 1) {
-      // If video near end allow it to hit ended; else force supernova start
-      if (isFinite(warp.duration) && warp.duration - warp.currentTime <= 1.0) {
-        beginSupernova();
-      } else if (!isFinite(warp.duration) || warp.duration < 2) {
-        beginSupernova();
-      }
+      next = null;
     }
 
-    rafId = requestAnimationFrame(animate);
-  }
-
-  function beginSupernova() {
-    if (supernovaStarted) return;
-    supernovaStarted = true;
-    try { warp.pause(); } catch {}
-    // Hide warp video (optional) keep for contrast
-    warp.style.opacity = '0';
-
-    const canvas = document.createElement('canvas');
-    canvas.style.cssText='position:absolute;inset:0;z-index:11000';
-    overlay.appendChild(canvas);
-    const ctx = canvas.getContext('2d');
-    function resize() {
-      canvas.width = overlay.clientWidth;
-      canvas.height = overlay.clientHeight;
-    }
-    resize();
-    window.addEventListener('resize', resize);
-
-    const supernovaStart = performance.now();
-    function draw() {
-      if (exploded) return;
-      const p = Math.min(1, (performance.now() - supernovaStart) / SUPERNOVA_MS);
-
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-
-      const cx = canvas.width/2;
-      const cy = canvas.height/2;
-      const maxR = Math.max(cx, cy) * 1.9;
-      const r = maxR * (0.2 + p * 1.3);
-
-      // Core gradient
-      const g = ctx.createRadialGradient(cx,cy,0,cx,cy,r);
-      g.addColorStop(0, `rgba(255,255,255,${0.85})`);
-      g.addColorStop(0.25, `rgba(255,240,200,${0.7 - p*0.3})`);
-      g.addColorStop(0.55, `rgba(255,180,90,${0.5 - p*0.4})`);
-      g.addColorStop(1, 'rgba(0,0,0,1)');
-      ctx.globalCompositeOperation='source-over';
-      ctx.fillStyle = g;
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-
-      // Shock ring
-      ctx.globalCompositeOperation='lighter';
-      ctx.strokeStyle = `rgba(255,220,170,${0.5 - p*0.45})`;
-      ctx.lineWidth = 34 - p*24;
-      ctx.beginPath();
-      ctx.arc(cx,cy,r*0.55,0,Math.PI*2);
-      ctx.stroke();
-
-      // Bloom
-      const bloom = ctx.createRadialGradient(cx,cy,0,cx,cy,r*0.7);
-      bloom.addColorStop(0, `rgba(255,255,255,${0.9 - p*0.25})`);
-      bloom.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = bloom;
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-
-      // Light rays
-      const rays = 12;
-      for (let i=0;i<rays;i++){
-        const ang = (i/rays)*Math.PI*2 + p*0.5;
-        const len = r*(0.65 + Math.sin(i*2.7)*0.18);
-        ctx.strokeStyle=`rgba(255,240,210,${0.25 - p*0.2})`;
-        ctx.lineWidth=5 - p*3.5;
-        ctx.beginPath();
-        ctx.moveTo(cx,cy);
-        ctx.lineTo(cx+Math.cos(ang)*len, cy+Math.sin(ang)*len);
-        ctx.stroke();
-      }
-
-      if (p < 1) {
-        requestAnimationFrame(draw);
+    // Once metadata known, set up timing logic
+    current.addEventListener('loadedmetadata', () => {
+      setupRateControlForCurrent(i);
+      if (next) {
+        // Prepare crossfade scheduling
+        const dur = current.duration;
+        const fadeStart = Math.max(0, dur - CROSSFADE_SEC);
+        scheduleCrossfade(fadeStart);
       } else {
-        triggerExplosion('supernova-complete');
+        // Last video: just wait for slowdown & normal end
+        if (i === SEQ_SOURCES.length - 1) {
+          // Nothing extra; slowdown handled in rate control
+        }
       }
-    }
-    requestAnimationFrame(draw);
+    });
   }
 
-  function triggerExplosion(reason) {
-    if (exploded) return;
-    exploded = true;
-    if (rafId) cancelAnimationFrame(rafId);
+  function scheduleCrossfade(startTime) {
+    function check() {
+      if (!current) return;
+      if (current.currentTime >= startTime) {
+        startCrossfade();
+      } else {
+        requestAnimationFrame(check);
+      }
+    }
+    requestAnimationFrame(check);
+  }
 
-    const flash = document.createElement('div');
-    flash.style.cssText='position:fixed;inset:0;background:#fff;z-index:12050;pointer-events:none;opacity:1';
-    document.body.appendChild(flash);
+  function startCrossfade() {
+    if (!next) return;
+    // Ensure next begins from start at target speed (will be set by its own rate logic)
+    next.play().catch(()=>{});
+    const durMs = CROSSFADE_SEC * 1000;
+    next.style.transition = `opacity ${CROSSFADE_SEC}s ${FADE_EASE}`;
+    current.style.transition = `opacity ${CROSSFADE_SEC}s ${FADE_EASE}`;
+    requestAnimationFrame(() => {
+      next.style.opacity = '1';
+      current.style.opacity = '0';
+    });
+    setTimeout(() => {
+      if (current) current.remove();
+      index++;
+      current = next;
+      next = null;
+      playIndex(index);
+    }, durMs + 60);
+  }
 
-    // Clear overlay
+  function playNext() {
+    index++;
+    if (current) current.remove();
+    if (next) {
+      current = next;
+      next = null;
+      current.style.opacity = '1';
+      current.play().catch(()=>{});
+      playIndex(index);
+    } else {
+      finish();
+    }
+  }
+
+  function setupRateControlForCurrent(i) {
+    cancelRateLoop();
+    const v = current;
+    if (!v || !isFinite(v.duration) || v.duration <= 0) return;
+
+    const dur = v.duration;
+    // Compute ramp window for first video: ends at (dur - CROSSFADE_SEC)
+    const rampEnd = Math.max(0, dur - CROSSFADE_SEC);
+    const rampStart = Math.max(0, rampEnd - FIRST_RAMP_SEC);
+
+    function rateLoop() {
+      if (!v) return;
+      const t = v.currentTime;
+
+      // Default desired rate
+      let desiredRate = 1;
+
+      if (i === 0) {
+        // Video 1: base 1 → ramp to TARGET_RATE over [rampStart, rampEnd]
+        if (t <= rampStart) {
+          desiredRate = 1;
+        } else if (t >= rampEnd) {
+          desiredRate = TARGET_RATE;
+        } else {
+          const p = (t - rampStart) / (rampEnd - rampStart);
+          // Ease (cubic)
+            desiredRate = 1 + (TARGET_RATE - 1) * (p < 0.5 ? 4*p*p*p : 1 - Math.pow(-2*p+2,3)/2);
+        }
+      } else if (i === SEQ_SOURCES.length - 1) {
+        // Last video: steady TARGET_RATE then slow in last LAST_SLOWDOWN_SEC
+        const slowStart = Math.max(0, dur - LAST_SLOWDOWN_SEC);
+        if (t < slowStart) {
+          desiredRate = TARGET_RATE;
+        } else {
+          const p = (t - slowStart) / Math.max(0.0001, (dur - slowStart));
+          // Ease out for deceleration
+          desiredRate = TARGET_RATE - (TARGET_RATE - LAST_FINAL_RATE) * (1 - Math.pow(1 - p, 3));
+        }
+      } else {
+        // Middle videos: constant TARGET_RATE
+        desiredRate = TARGET_RATE;
+      }
+
+      if (Math.abs(v.playbackRate - desiredRate) > 0.01) {
+        v.playbackRate = desiredRate;
+      }
+      rateRAF = requestAnimationFrame(rateLoop);
+    }
+    rateLoop();
+  }
+
+  function cancelRateLoop() {
+    if (rateRAF) cancelAnimationFrame(rateRAF);
+    rateRAF = null;
+  }
+
+  function finish() {
+    cancelRateLoop();
     overlay.classList.remove('active');
     overlay.innerHTML = '';
-
-    // Restore background immediately
-    if (videoBg) videoBg.style.opacity='1';
+    const videoBg = $('#videoBg');
+    const bgVideo = $('#bg-video');
+    if (videoBg) videoBg.style.opacity = '1';
     if (bgVideo) { try { bgVideo.play(); } catch {} }
-
-    // Fast fade
-    setTimeout(()=>{
-      flash.style.transition='opacity .22s ease-out';
-      flash.style.opacity='0';
-      setTimeout(()=>{
-        flash.remove();
-        isCinematic = false;
-      }, 230);
-    }, FLASH_MS);
+    isCinematic = false;
   }
+}
+
+// Existing site features (panels, theme, mouse trail)
+const themes = ['neon','ocean','forest','sunset','purple'];
+let currentThemeIndex = 0;
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadTheme();
+  initPanels();
+  initControls();
+  autoplayBackground();
+});
+
+function autoplayBackground(){
+  const v = $('#bg-video');
+  if (v) v.play().catch(()=>{
+    const resume = () => { v.play().catch(()=>{}); document.removeEventListener('click', resume, true); };
+    document.addEventListener('click', resume, true);
+  });
+}
+
+function initPanels() {
+  document.querySelectorAll('.panel').forEach(p=>{
+    const body = p.querySelector('.body');
+    p.addEventListener('click', ()=>togglePanel(p,body));
+    p.addEventListener('keydown', e=>{
+      if (e.key==='Enter' || e.key===' ') {
+        e.preventDefault();
+        togglePanel(p,body);
+      }
+    });
+  });
+}
+function togglePanel(panel, body){
+  const open = panel.getAttribute('aria-expanded')==='true';
+  panel.setAttribute('aria-expanded', String(!open));
+  body.hidden = open;
+}
+
+function loadTheme(){
+  const stored = localStorage.getItem('site-theme') || 'neon';
+  currentThemeIndex = themes.indexOf(stored);
+  if (currentThemeIndex < 0) currentThemeIndex = 0;
+  document.body.setAttribute('data-theme', themes[currentThemeIndex]);
+}
+function toggleTheme(){
+  currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+  const t = themes[currentThemeIndex];
+  document.body.setAttribute('data-theme', t);
+  localStorage.setItem('site-theme', t);
+}
+
+let mouseTrailEnabled=false;
+let trailDots=[];
+const trailCount=25;
+let mousePos={x:0,y:0};
+
+function enableMouseTrail(){
+  if (mouseTrailEnabled) return;
+  mouseTrailEnabled=true;
+  const core=$('#cursorCore');
+  core.style.display='block';
+  for(let i=0;i<trailCount;i++){
+    const d=document.createElement('div');
+    d.className='cursor-trail-dot';
+    const size=12-(i*0.4);
+    d.style.width=size+'px';
+    d.style.height=size+'px';
+    const hue=(i*15)%360;
+    d.style.background=`hsl(${hue},100%,60%)`;
+    d.style.boxShadow=`0 0 ${size*2}px hsl(${hue},100%,60%)`;
+    document.body.appendChild(d);
+    trailDots.push({el:d,x:0,y:0});
+  }
+  document.addEventListener('mousemove', onMouse);
+  requestAnimationFrame(animateTrail);
+}
+function disableMouseTrail(){
+  if(!mouseTrailEnabled) return;
+  mouseTrailEnabled=false;
+  $('#cursorCore').style.display='none';
+  trailDots.forEach(d=>d.el.remove());
+  trailDots=[];
+  document.removeEventListener('mousemove', onMouse);
+}
+function onMouse(e){ mousePos.x=e.clientX; mousePos.y=e.clientY; }
+function animateTrail(){
+  if(!mouseTrailEnabled) return;
+  const core=$('#cursorCore');
+  core.style.left=mousePos.x+'px';
+  core.style.top=mousePos.y+'px';
+  trailDots.forEach((dot,idx)=>{
+    const target=idx===0?mousePos:trailDots[idx-1];
+    dot.x+=(target.x-dot.x)*0.3;
+    dot.y+=(target.y-dot.y)*0.3;
+    dot.el.style.left=dot.x+'px';
+    dot.el.style.top=dot.y+'px';
+    dot.el.style.opacity=String(1-(idx*0.03));
+  });
+  requestAnimationFrame(animateTrail);
+}
+
+function initControls(){
+  const themeBtn = $('#themeToggleBtn');
+  const trailBtn = $('#mouseTrailToggleBtn');
+  if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+  if (trailBtn) trailBtn.addEventListener('click', ()=>{
+    if(mouseTrailEnabled){ disableMouseTrail(); trailBtn.textContent='Mouse Trail'; }
+    else { enableMouseTrail(); trailBtn.textContent='Mouse Trail (On)'; }
+  });
+  document.addEventListener('keydown', e=>{
+    if (e.key.toLowerCase()==='t') toggleTheme();
+    if (e.key.toLowerCase()==='m' && trailBtn) trailBtn.click();
+  });
 }
 </script>
 </body>
