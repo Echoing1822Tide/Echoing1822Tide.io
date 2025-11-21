@@ -234,13 +234,25 @@
       text-align:center;
     }
 
+    /* Make hidden button subtle but definitely clickable */
     #hiddenCelebrate{
-      position:fixed;bottom:20px;right:20px;
-      width:60px;height:60px;
-      background:transparent;border:none;
-      cursor:pointer;z-index:9999;opacity:0;
+      position:fixed;
+      bottom:20px;
+      right:20px;
+      width:40px;
+      height:40px;
+      background:rgba(255,255,255,0.03);
+      border:1px solid rgba(0,255,255,0.35);
+      border-radius:50%;
+      cursor:pointer;
+      z-index:9999;
+      opacity:0.25;
+      pointer-events:auto;
     }
-    #hiddenCelebrate:hover{opacity:0.1}
+    #hiddenCelebrate:hover{
+      opacity:0.5;
+      box-shadow:0 0 10px rgba(0,255,255,0.7);
+    }
 
     .warp-overlay{
       position:fixed;inset:0;z-index:10000;
@@ -432,7 +444,7 @@
   <!-- cursor elements -->
   <div id="cursorCore" class="cursor-core" aria-hidden="true"></div>
 
-  <!-- === All scripts in one place to avoid weird race conditions === -->
+  <!-- === All scripts in one place === -->
   <script>
   (function(){
     /* ===== Main BTTF background music ===== */
@@ -518,65 +530,288 @@
     const cursorCore = document.getElementById('cursorCore');
     let trailEnabled = false;
 
-      function onPointerMove(e){
-        if (!cursorCore) return;
-        cursorCore.style.display = 'block';
-        cursorCore.style.left = e.clientX + 'px';
-        cursorCore.style.top  = e.clientY + 'px';
-  
-        const dot = document.createElement('div');
-        dot.className = 'cursor-trail-dot';
-        dot.style.width  = '10px';
-        dot.style.height = '10px';
-        dot.style.left   = e.clientX + 'px';
-        dot.style.top    = e.clientY + 'px';
-        dot.style.background = 'radial-gradient(circle, var(--accent-cyan), var(--accent-magenta))';
-        dot.style.opacity = '0.7';
-        document.body.appendChild(dot);
-  
+    function onPointerMove(e){
+      if (!cursorCore) return;
+      cursorCore.style.display = 'block';
+      cursorCore.style.left = e.clientX + 'px';
+      cursorCore.style.top  = e.clientY + 'px';
+
+      const dot = document.createElement('div');
+      dot.className = 'cursor-trail-dot';
+      dot.style.width  = '10px';
+      dot.style.height = '10px';
+      dot.style.left   = e.clientX + 'px';
+      dot.style.top    = e.clientY + 'px';
+      dot.style.background = 'rgba(0,255,255,0.7)';
+      document.body.appendChild(dot);
+
+      requestAnimationFrame(() => {
+        dot.style.transform = 'scale(0.4)';
+        dot.style.opacity = '0';
+      });
+      setTimeout(() => dot.remove(), 350);
+    }
+
+    function enableTrail(){
+      if (trailEnabled) return;
+      trailEnabled = true;
+      if (cursorCore) cursorCore.style.display = 'block';
+      document.addEventListener('pointermove', onPointerMove);
+    }
+
+    function disableTrail(){
+      if (!trailEnabled) return;
+      trailEnabled = false;
+      if (cursorCore) cursorCore.style.display = 'none';
+      document.removeEventListener('pointermove', onPointerMove);
+    }
+
+    if (trailBtn){
+      trailBtn.addEventListener('click', () => {
+        if (trailEnabled) disableTrail(); else enableTrail();
+      });
+    }
+    document.addEventListener('keydown', e => {
+      if (e.key === 'm' || e.key === 'M'){
+        if (trailEnabled) disableTrail(); else enableTrail();
+      }
+    });
+
+    /* ===== Hidden warp cinematic ===== */
+    const hiddenBtn = document.getElementById('hiddenCelebrate');
+    const warpOverlay = document.getElementById('warpOverlay');
+    const bgVideo = document.getElementById('bg-video');
+    const videoBg = document.getElementById('videoBg');
+    const blackout = document.getElementById('blackout');
+
+    const WARP_VIDEOS = [
+      'Screensaver-1.mp4',
+      'Screensaver-2.mp4',
+      'Screensaver-3.mp4',
+      'Screensaver-4.mp4'
+    ];
+    const WARP_TRAVEL_AUDIO_SRC = 'Travel-through-space.mp3';
+    const WARP_FINAL_AUDIO_SRC  = 'Blender-Hyperspace-Jump.mp3';
+    const VIDEO_FADE_SEC = 0.7;
+    const AUDIO_CROSSFADE_MS = 1500;
+
+    let isCinematic = false;
+
+    function startCinematic(){
+      if (isCinematic) return;
+      isCinematic = true;
+
+      if (!warpOverlay) return;
+      warpOverlay.classList.add('active');
+      warpOverlay.style.background = '#000';
+      warpOverlay.innerHTML = '';
+
+      if (window.mainMusic){
+        try { window.mainMusic.pause(); } catch {}
+      }
+      if (bgVideo){
+        try { bgVideo.pause(); } catch {}
+      }
+      if (videoBg) videoBg.style.opacity = '0';
+
+      const travelAudio = new Audio(WARP_TRAVEL_AUDIO_SRC);
+      travelAudio.loop = true;
+      travelAudio.volume = 0.8;
+
+      const finalAudio = new Audio(WARP_FINAL_AUDIO_SRC);
+      finalAudio.loop = false;
+      finalAudio.volume = 0.0;
+
+      safePlayAudio(travelAudio);
+      finalAudio.load();
+
+      let currentIndex = 0;
+      let currentVid   = null;
+      let finalStarted = false;
+      let finished     = false;
+
+      finalAudio.addEventListener('ended', () => {
+        if (finished) return;
+        if (blackout){
+          blackout.classList.add('show');
+          requestAnimationFrame(() => blackout.classList.add('visible'));
+        }
         setTimeout(() => {
-          dot.style.opacity = '0';
-          setTimeout(() => dot.remove(), 300);
-        }, 220);
-      }
-  
-      function enableTrail(){
-        if (trailEnabled) return;
-        trailEnabled = true;
-        document.addEventListener('pointermove', onPointerMove);
-        if (cursorCore) cursorCore.style.display = 'block';
-      }
-  
-      function disableTrail(){
-        if (!trailEnabled) return;
-        trailEnabled = false;
-        document.removeEventListener('pointermove', onPointerMove);
-        if (cursorCore) cursorCore.style.display = 'none';
-        document.querySelectorAll('.cursor-trail-dot').forEach(dot => dot.remove());
-      }
-  
-      if (trailBtn){
-        trailBtn.addEventListener('click', () => {
-          if (trailEnabled) {
-            disableTrail();
-          } else {
-            enableTrail();
-          }
+          finishCinematic(travelAudio, finalAudio);
+        }, 1200);
+      });
+
+      playNextVideo();
+
+      function playNextVideo(){
+        if (finished) return;
+
+        if (currentVid && currentVid.parentNode){
+          currentVid.parentNode.removeChild(currentVid);
+          currentVid = null;
+        }
+
+        if (currentIndex >= WARP_VIDEOS.length){
+          finishCinematic(travelAudio, finalAudio);
+          return;
+        }
+
+        if (currentIndex === WARP_VIDEOS.length - 1){
+          playFinalVideo();
+          return;
+        }
+
+        const vid = createWarpVideo(WARP_VIDEOS[currentIndex]);
+        currentVid = vid;
+        warpOverlay.appendChild(vid);
+
+        vid.addEventListener('loadeddata', () => {
+          requestAnimationFrame(() => { vid.style.opacity = '1'; });
+        });
+
+        vid.play().catch(() => {});
+
+        vid.addEventListener('ended', () => {
+          currentIndex++;
+          playNextVideo();
         });
       }
-      document.addEventListener('keydown', e => {
-        if (e.key === 'm' || e.key === 'M'){
-          if (trailEnabled) {
-            disableTrail();
-          } else {
-            enableTrail();
+
+      function playFinalVideo(){
+        const vid = createWarpVideo(WARP_VIDEOS[WARP_VIDEOS.length - 1]);
+        vid.loop = true;
+        currentVid = vid;
+        warpOverlay.appendChild(vid);
+
+        vid.addEventListener('loadeddata', () => {
+          requestAnimationFrame(() => { vid.style.opacity = '1'; });
+
+          if (!finalStarted){
+            finalStarted = true;
+            crossfadeAudio(travelAudio, finalAudio, AUDIO_CROSSFADE_MS);
           }
-        }
+        });
+
+        vid.play().catch(() => {});
+      }
+
+      function createWarpVideo(src){
+        const v = document.createElement('video');
+        v.className = 'warp-player';
+        v.src = src;
+        v.autoplay = true;
+        v.muted = true;
+        v.playsInline = true;
+        v.preload = 'auto';
+        v.loop = false;
+        v.setAttribute('controlslist','nodownload nofullscreen noremoteplayback');
+        v.setAttribute('disablePictureInPicture','true');
+        v.setAttribute('webkit-playsinline','true');
+        v.setAttribute('playsinline','true');
+        v.removeAttribute('controls');
+        v.style.position = 'absolute';
+        v.style.inset = '0';
+        v.style.width = '100%';
+        v.style.height = '100%';
+        v.style.objectFit = 'cover';
+        v.style.opacity = '0';
+        v.style.transition = `opacity ${VIDEO_FADE_SEC}s linear`;
+        v.style.background = '#000';
+        return v;
+      }
+
+      function safePlayAudio(audio){
+        audio.play().catch(() => {
+          const resume = () => {
+            audio.play().catch(() => {});
+            document.removeEventListener('click', resume, true);
+            document.removeEventListener('keydown', resume, true);
+          };
+          document.addEventListener('click', resume, true);
+          document.addEventListener('keydown', resume, true);
+        });
+      }
+
+      function crossfadeAudio(from, to, durationMs){
+        const start     = performance.now();
+        const fromVol0  = from.volume;
+        const toVol0    = to.volume;
+        const targetVol = 0.9;
+
+        safePlayAudio(to);
+
+        (function step(){
+          const now = performance.now();
+          const p = Math.min(1, (now - start) / durationMs);
+          from.volume = fromVol0 * (1 - p);
+          to.volume   = toVol0 + (targetVol - toVol0) * p;
+
+          if (p < 1){
+            requestAnimationFrame(step);
+          } else {
+            try { from.pause(); } catch {}
+          }
+        })();
+      }
+
+      function finishCinematic(travelAudio, finalAudio){
+        if (finished) return;
+        finished = true;
+
+        const v1 = travelAudio ? travelAudio.volume : 0;
+        const v2 = finalAudio ? finalAudio.volume : 0;
+        const D  = 800;
+        const t0 = performance.now();
+
+        (function step(){
+          const p = Math.min(1, (performance.now() - t0) / D);
+          if (travelAudio) travelAudio.volume = v1 * (1 - p);
+          if (finalAudio)  finalAudio.volume  = v2 * (1 - p);
+
+          if (p < 1){
+            requestAnimationFrame(step);
+          } else {
+            try { travelAudio && travelAudio.pause(); } catch {}
+            try { finalAudio && finalAudio.pause(); } catch {}
+
+            if (warpOverlay){
+              warpOverlay.classList.remove('active');
+              warpOverlay.innerHTML = '';
+            }
+
+            if (blackout){
+              blackout.classList.remove('visible');
+              setTimeout(() => blackout.classList.remove('show'), 500);
+            }
+
+            if (videoBg) videoBg.style.opacity = '1';
+            if (bgVideo){
+              try { bgVideo.play(); } catch {}
+            }
+            if (window.mainMusic){
+              try { window.mainMusic.play(); } catch {}
+            }
+
+            isCinematic = false;
+          }
+        })();
+      }
+    }
+
+    /* Hook up the hidden button + keyboard shortcut */
+    if (hiddenBtn){
+      hiddenBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        startCinematic();
       });
-  
-      // Optional: Enable trail by default if desired
-      // enableTrail();
-  
-      /* ===== End of scripts ===== */
-    })();
-    </script>
+    }
+    document.addEventListener('keydown', e => {
+      if (e.key === 'h' || e.key === 'H'){
+        startCinematic();
+      }
+    });
+
+  })();
+  </script>
+</body>
+</html>
