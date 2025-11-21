@@ -121,7 +121,15 @@
     .panel .body ul{padding-left:1.1rem}
     .panel .body li{margin:.25rem 0}
     .panel .body h4{margin:.6rem 0 .25rem;color:var(--accent-cyan);font-size:1rem}
-    footer{margin-top:1.25rem;color:rgba(151,160,255,0.85);font-size:.9rem;text-align:center}
+
+    footer{
+      margin-top:auto;
+      padding-top:1.25rem;
+      padding-bottom:1rem;
+      color:rgba(151,160,255,0.85);
+      font-size:.9rem;
+      text-align:center;
+    }
 
     /* Hidden celebrate button */
     #hiddenCelebrate{position:fixed;bottom:20px;right:20px;width:60px;height:60px;background:transparent;border:none;cursor:pointer;z-index:9999;opacity:0}
@@ -532,6 +540,7 @@
           let rate = 1;
 
           if (index === 0) {
+            // First video: ramp up into warp
             const accelStart = dur * 0.3;
             const accelEnd   = Math.max(accelStart + 0.1, dur - CROSSFADE_SEC);
             if (t <= accelStart) {
@@ -543,22 +552,15 @@
               rate = 1 + (FAST_RATE - 1) * easeInOutCubic(p);
             }
           } else if (index > 0 && index < WARP_VIDEOS.length - 1) {
+            // Middle videos: stable warp rate
             rate = NORMAL_RATE;
           } else {
-            if (isFinite(dur) && dur > 0) {
-              const slowStart = Math.max(0, dur - 5); // last 5 seconds
-              if (t <= slowStart) {
-                rate = NORMAL_RATE;
-              } else {
-                const p = (t - slowStart) / Math.max(0.001, dur - slowStart);
-                rate = NORMAL_RATE - (NORMAL_RATE - FINAL_MIN_RATE) * easeOutCubic(p);
-              }
-
-              if (!blackFadeDone && dur - t <= 1.0 && blackout) {
-                blackFadeDone = true;
-                blackout.classList.add('show');
-                requestAnimationFrame(() => blackout.classList.add('visible'));
-              }
+            // Last video: normal speed, just fade to black near the end
+            rate = 1;
+            if (isFinite(dur) && dur > 0 && !blackFadeDone && dur - t <= 1.0 && blackout) {
+              blackFadeDone = true;
+              blackout.classList.add('show');
+              requestAnimationFrame(() => blackout.classList.add('visible'));
             }
           }
 
@@ -573,10 +575,6 @@
         return x < 0.5
           ? 4 * x * x * x
           : 1 - Math.pow(-2 * x + 2, 3) / 2;
-      }
-
-      function easeOutCubic(x) {
-        return 1 - Math.pow(1 - x, 3);
       }
 
       function cancelRateLoop() {
