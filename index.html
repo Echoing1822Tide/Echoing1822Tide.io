@@ -234,7 +234,7 @@
       text-align:center;
     }
 
-    /* Hidden button — subtle but clickable */
+    /* Hidden button — visible but subtle */
     #hiddenCelebrate{
       position:fixed;
       bottom:20px;
@@ -577,7 +577,7 @@
       }
     });
 
-    /* ===== Hidden warp cinematic with 1.5s overlaps ===== */
+    /* ===== Hidden warp cinematic with bigger overlaps + 3s black ===== */
     const hiddenBtn   = document.getElementById('hiddenCelebrate');
     const warpOverlay = document.getElementById('warpOverlay');
     const bgVideo     = document.getElementById('bg-video');
@@ -593,8 +593,8 @@
     const WARP_TRAVEL_AUDIO_SRC = 'Travel-through-space.mp3';
     const WARP_FINAL_AUDIO_SRC  = 'Blender-Hyperspace-Jump.mp3';
 
-    const VIDEO_FADE_SEC     = 0.7;        // per-video fade
-    const VIDEO_OVERLAP_SEC  = 1.5;        // how much they overlap
+    const VIDEO_FADE_SEC     = 0.7;
+    const VIDEO_OVERLAP_SEC  = 3.5;     // was 1.5, now +2s more overlap
     const AUDIO_CROSSFADE_MS = 1500;
 
     let isCinematic = false;
@@ -634,13 +634,18 @@
 
       finalAudio.addEventListener('ended', () => {
         if (finished) return;
+        // Immediately hide any remaining warp videos
+        const vids = warpOverlay.querySelectorAll('video.warp-player');
+        vids.forEach(v => v.style.opacity = '0');
+
         if (blackout){
           blackout.classList.add('show');
           requestAnimationFrame(() => blackout.classList.add('visible'));
         }
+        // Hold full black for ~3 seconds total before returning
         setTimeout(() => {
           finishCinematic(travelAudio, finalAudio);
-        }, 1200);
+        }, 3000);
       });
 
       playSegment(currentIndex);
@@ -656,7 +661,6 @@
         const vid = createWarpVideo(WARP_VIDEOS[index]);
 
         if (!currentVid){
-          // first video: just fade in from black
           currentVid = vid;
           warpOverlay.appendChild(vid);
 
@@ -665,7 +669,6 @@
           });
           vid.play().catch(() => {});
         } else {
-          // crossfade from currentVid to this new one
           const previous = currentVid;
           currentVid = vid;
           vid.style.opacity = '0';
@@ -683,7 +686,6 @@
         }
 
         if (!isLast){
-          // plan the next segment to start VIDEO_OVERLAP_SEC before this one ends
           let overlapTriggered = false;
           vid.addEventListener('loadedmetadata', () => {
             const duration = vid.duration || 0;
@@ -700,7 +702,7 @@
             });
           });
         } else {
-          // last video (Screensaver-4): loop and start Blender audio once visible
+          // last video: loop while Blender plays
           vid.loop = true;
           vid.addEventListener('loadedmetadata', () => {
             if (!finalStarted){
@@ -814,7 +816,6 @@
       }
     }
 
-    /* Hook up the hidden button + keyboard shortcut */
     if (hiddenBtn){
       hiddenBtn.addEventListener('click', (e) => {
         e.stopPropagation();
