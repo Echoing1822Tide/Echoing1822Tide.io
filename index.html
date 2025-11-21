@@ -140,26 +140,30 @@
       .container{padding:2rem 1rem}
       .topbar{padding:.9rem}
     }
+
     .warp-overlay video.warp-player{
-  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
-  background:#000; /* ensures no see-through edges */
-}
+      position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+      background:#000; /* ensures no see-through edges */
+    }
 
     /* Cinematic FX layers */
     #lensFlareFX{position:fixed;inset:0;pointer-events:none;z-index:11005;background:
-radial-gradient(circle at 50% 50%,rgba(255,255,255,.25),rgba(255,255,255,0) 60%);
-mix-blend-mode:screen;opacity:0;transition:opacity .35s linear,transform .35s ease}
-#starFX{position:fixed;inset:0;pointer-events:none;z-index:11000;opacity:0;transition:opacity .8s ease}
-#starFX .sx{position:absolute;width:3px;height:3px;background:#fff;border-radius:50%;will-change:transform,opacity}
-#cinReady{position:fixed;bottom:14px;right:14px;width:10px;height:10px;border-radius:50%;
-background:radial-gradient(circle,#0ff,#00a0a0);box-shadow:0 0 10px #0ff;
-opacity:.15;z-index:9999;display:none;pointer-events:none;transition:opacity .6s ease}
+      radial-gradient(circle at 50% 50%,rgba(255,255,255,.25),rgba(255,255,255,0) 60%);
+      mix-blend-mode:screen;opacity:0;transition:opacity .35s linear,transform .35s ease}
+    #starFX{position:fixed;inset:0;pointer-events:none;z-index:11000;opacity:0;transition:opacity .8s ease}
+    #starFX .sx{position:absolute;width:3px;height:3px;background:#fff;border-radius:50%;will-change:transform,opacity}
+    #cinReady{position:fixed;bottom:14px;right:14px;width:10px;height:10px;border-radius:50%;
+      background:radial-gradient(circle,#0ff,#00a0a0);box-shadow:0 0 10px #0ff;
+      opacity:.15;z-index:9999;display:none;pointer-events:none;transition:opacity .6s ease}
     /* Fade to black overlay (last video) */
     #cinBlackFade{position:fixed;inset:0;background:#000;z-index:12040;pointer-events:none;
-opacity:0;transition:opacity 1.1s ease}
+      opacity:0;transition:opacity 1.1s ease}
   </style>
 </head>
 <body data-theme="neon">
+  <!-- Main background music: Back To The Future End Credits -->
+  <audio id="main-music" src="Back-to-the-Future-(End Credits).mp3" loop></audio>
+
   <!-- Video + overlay -->
   <div class="video-background" aria-hidden="true" id="videoBg">
     <video autoplay muted loop id="bg-video" preload="auto" disablePictureInPicture poster="">
@@ -313,669 +317,381 @@ opacity:0;transition:opacity 1.1s ease}
 
   <!-- cursor elements -->
   <div id="cursorCore" class="cursor-core" aria-hidden="true"></div>
-<script>
-  // Audio files
-  // const AMBIENT_SRC = 'ambient-space.mp3';
-  // const SUSPENSE_SRC = 'space-suspense.mp3';
 
-  // BUG FIX: Define overlay before using it
-  const overlay = document.getElementById('warpOverlay');
+  <!-- === Main Background Music Script (BTTF) === -->
+  <script>
+    const mainMusic = document.getElementById('main-music');
 
-  const ambientAudio = document.createElement('audio');
-  ambientAudio.src = AMBIENT_SRC;
-  ambientAudio.loop = true;
-  ambientAudio.preload = 'auto';
-  ambientAudio.volume = 0.55;
+    function startMainMusicOnce() {
+      if (!mainMusic) return;
+      mainMusic.volume = 0.45;
+      mainMusic.play().catch(() => {});
 
-  const suspenseAudio = document.createElement('audio');
-  suspenseAudio.src = SUSPENSE_SRC;
-  suspenseAudio.loop = true;
-  suspenseAudio.preload = 'auto';
-  suspenseAudio.volume = 0.0;
+      document.removeEventListener('click', startMainMusicOnce);
+      document.removeEventListener('keydown', startMainMusicOnce);
+    }
 
-  // Only append if overlay exists
-  if (overlay) {
-    overlay.appendChild(ambientAudio);
-    overlay.appendChild(suspenseAudio);
-  }
+    document.addEventListener('click', startMainMusicOnce, { once: true });
+    document.addEventListener('keydown', startMainMusicOnce, { once: true });
 
-  safePlay(ambientAudio,'ambient');
-  suspenseAudio.load();
+    // Expose for cinematic script
+    window.mainMusic = mainMusic;
+  </script>
 
-  function safePlay(a,label){
-    a.play().catch(err=>{
-      const resume = () => {
-        a.play().catch(()=>{});
-        document.removeEventListener('click', resume, true);
-        document.removeEventListener('keydown', resume, true);
-      };
-      document.addEventListener('click', resume, true);
-      document.addEventListener('keydown', resume, true);
+  <!-- === Warp Cinematic Script (Screensavers + Space Audio) === -->
+  <script>
+    const $ = s => document.querySelector(s);
+    let isCinematic = false;
+
+    /* === Warp Cinematic Config === */
+    const WARP_VIDEOS = [
+      'Screensaver-1.mp4',
+      'Screensaver-2.mp4',
+      'Screensaver-3.mp4',
+      'Screensaver-4.mp4'
+    ];
+
+    // Travel-through-space for 1–3, Blender-Hyperspace-Jump for 4
+    const WARP_TRAVEL_AUDIO_SRC = 'Travel-through-space.mp3';
+    const WARP_FINAL_AUDIO_SRC  = 'Blender-Hyperspace-Jump.mp3';
+
+    const CROSSFADE_SEC   = 3;
+    const FAST_RATE       = 3;
+    const NORMAL_RATE     = 1.15;
+    const FINAL_MIN_RATE  = 0.6;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = $('#hiddenCelebrate');
+      if (btn) btn.addEventListener('click', startCinematic);
     });
-  }
 
-  // Video management
-  let currentIndex = 0;
-  let currentVid = null;
-  let nextVid = null;
-  let rateRAF = null;
-  let finished = false;
-  let fourthMetaReady = false;
-  let blackFadeDone = false;
-  const startWallClock = performance.now();
+    function startCinematic() {
+      if (isCinematic) return;
+      isCinematic = true;
 
-  playVideo(currentIndex);
+      const overlay = $('#warpOverlay');
+      const bgVideo = $('#bg-video');
+      const videoBg = $('#videoBg');
+      const blackout = $('#blackout');
 
-  function createVideo(src){
-    const v = document.createElement('video');
-    v.className='warp-player';
-    v.muted=true;
-    v.playsInline=true;
-    v.autoplay=true;
-    v.preload='auto';
-    v.loop=false;
-    v.disablePictureInPicture=true;
-    v.setAttribute('controlslist','nodownload nofullscreen noremoteplayback');
-    v.style.position='absolute';
-    v.style.inset='0';
-    v.style.width='100%';
-    v.style.height='100%';
-    v.style.objectFit='cover';
-    v.style.opacity='0';
-    v.style.transition=`opacity ${CROSSFADE_SEC}s linear`;
-    const s = document.createElement('source');
-    s.src=src; s.type='video/mp4';
-    v.appendChild(s);
-    return v;
-  }
+      if (!overlay) return;
 
-  function playVideo(i){
-    if(finished) return;
-    if(i>=SOURCES.length){
-      ensureTotalTimeOrFinish();
-      return;
-    }
+      overlay.classList.add('active');
+      overlay.style.background = '#000';
+      overlay.innerHTML = '';
 
-    currentVid = createVideo(SOURCES[i]);
-    overlay.appendChild(currentVid);
-
-    currentVid.play().catch(()=>gesturePlay(currentVid));
-    currentVid.addEventListener('loadeddata', ()=> requestAnimationFrame(()=> currentVid.style.opacity='1'));
-    currentVid.addEventListener('error', ()=> skipToNext());
-    currentVid.addEventListener('ended', ()=> skipToNext());
-
-    if(i+1 < SOURCES.length){
-      nextVid = createVideo(SOURCES[i+1]);
-      overlay.appendChild(nextVid);
-    }else{
-      nextVid = null;
-    }
-
-    currentVid.addEventListener('loadedmetadata', ()=>{
-      setupRate(i, currentVid);
-      if(nextVid){
-        const dur = currentVid.duration;
-        scheduleCrossfade(Math.max(0, dur - CROSSFADE_SEC));
-      }
-      if(i===3){
-        fourthMetaReady = true;
-        currentVid.addEventListener('timeupdate', ambientReturnWatcher);
-      }
-      if(i===1){
-        // Switch to suspense
-        crossfadeAudio(ambientAudio, suspenseAudio, 1200);
-      }
-    });
-  }
-
-  function gesturePlay(v){
-    const resume=()=>{ v.play().catch(()=>{}); document.removeEventListener('click',resume,true); };
-    document.addEventListener('click', resume, true);
-  }
-
-  function crossfadeAudio(from,to,duration){
-    const start = performance.now();
-    const f0 = from.volume;
-    const t0 = to.volume;
-    if(to.paused) safePlay(to,'to');
-    (function step(){
-      const p = Math.min(1,(performance.now()-start)/duration);
-      from.volume = f0*(1-p);
-      to.volume = t0 + (0.55 - t0)*p;
-      if(p<1) requestAnimationFrame(step);
-    })();
-  }
-
-  function setupRate(i, vid){
-    cancelRateLoop();
-    const dur = vid.duration||0;
-    const rampEnd = Math.max(0, dur - CROSSFADE_SEC);
-    const rampStart = Math.max(0, rampEnd - FIRST_RAMP_SEC);
-
-    function loop(){
-      if(!vid || finished) return;
-      const t = vid.currentTime;
-      let rate = 1;
-
-      if(i===0){
-        if(t<=rampStart) rate=1;
-        else if(t>=rampEnd) rate=FAST_RATE;
-        else{
-          const p=(t-rampStart)/(rampEnd-rampStart);
-          rate=1+(FAST_RATE-1)*(p<0.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2);
-        }
-      }else if(i===1){
-        rate=1;
-      }else if(i===2){
-        rate=NAT_RATE;
-      }else if(i===3){
-        const slowStart = Math.max(0, dur - SLOW_DOWN_SEC);
-        if(t<slowStart) rate=NAT_RATE;
-        else{
-          const p=(t-slowStart)/Math.max(0.001,dur-slowStart);
-          rate = NAT_RATE - (NAT_RATE - FINAL_RATE)*(1-Math.pow(1-p,3));
-        }
-        // Trigger fade to black last second
-        if(!blackFadeDone && isFinite(dur) && dur - t <= 1){
-          blackFadeDone = true;
-          const bf = document.getElementById('blackout');
-          bf.classList.add('show');
-          requestAnimationFrame(()=> bf.classList.add('visible'));
-        }
+      // Pause main music while warp runs
+      if (window.mainMusic && !window.mainMusic.paused) {
+        try { window.mainMusic.pause(); } catch {}
       }
 
-      vid.playbackRate = rate;
-      rateRAF = requestAnimationFrame(loop);
-    }
-    loop();
-  }
-
-  function scheduleCrossfade(at){
-    if(!currentVid || !nextVid) return;
-    function watch(){
-      if(!currentVid) return;
-      if(currentVid.currentTime >= at){
-        currentVid.removeEventListener('timeupdate', watch);
-        nextVid.play().catch(()=>gesturePlay(nextVid));
-        requestAnimationFrame(()=>{
-          nextVid.style.opacity='1';
-          currentVid.style.opacity='0';
-        });
-        setTimeout(()=>{
-          if(currentVid){ currentVid.remove(); }
-          currentIndex++;
-          currentVid = nextVid;
-          nextVid = null;
-          playVideo(currentIndex);
-        }, CROSSFADE_SEC*1000+60);
+      if (bgVideo) {
+        try { bgVideo.pause(); } catch {}
       }
-    }
-    currentVid.addEventListener('timeupdate', watch);
-  }
+      if (videoBg) videoBg.style.opacity = '0';
 
-  function skipToNext(){
-    currentIndex++;
-    if(currentVid) currentVid.remove();
-    if(nextVid){
-      currentVid = nextVid;
-      nextVid = null;
-      currentVid.style.opacity='1';
-      currentVid.play().catch(()=>gesturePlay(currentVid));
-      playVideo(currentIndex);
-    }else{
-      ensureTotalTimeOrFinish();
-    }
-  }
+      // === Warp audio setup ===
+      const travelAudio = document.createElement('audio');
+      travelAudio.src = WARP_TRAVEL_AUDIO_SRC;
+      travelAudio.loop = true;
+      travelAudio.volume = 0.75;
+      travelAudio.preload = 'auto';
 
-  function ambientReturnWatcher(){
-    if(!currentVid || !fourthMetaReady) return;
-    const dur = currentVid.duration;
-    if(!isFinite(dur) || dur <= LAST_AMBIENT_SEC) return;
-    const remaining = dur - currentVid.currentTime;
-    if(remaining <= LAST_AMBIENT_SEC){
-      currentVid.removeEventListener('timeupdate', ambientReturnWatcher);
-      crossfadeAudio(suspenseAudio, ambientAudio, 1500);
-    }
-  }
+      const finalAudio = document.createElement('audio');
+      finalAudio.src = WARP_FINAL_AUDIO_SRC;
+      finalAudio.loop = true;
+      finalAudio.volume = 0.0;
+      finalAudio.preload = 'auto';
 
-  function ensureTotalTimeOrFinish(){
-    const elapsed = performance.now() - startWallClock;
-    if(elapsed < MIN_TOTAL_MS){
-      if(!currentVid){
-        currentVid = createVideo(SOURCES[SOURCES.length-1]);
-        overlay.appendChild(currentVid);
-        currentVid.play().catch(()=>gesturePlay(currentVid));
-      }
-      currentVid.loop = true;
-      setupRate(SOURCES.length-1, currentVid);
-      setTimeout(()=>finish(), MIN_TOTAL_MS - elapsed);
-    } else {
-      finish();
-    }
-  }
+      overlay.appendChild(travelAudio);
+      overlay.appendChild(finalAudio);
 
-  function cancelRateLoop(){
-    if(rateRAF) cancelAnimationFrame(rateRAF);
-    rateRAF = null;
-  }
+      safePlayAudio(travelAudio);
+      finalAudio.load();
 
-  function finish(){
-    if(finished) return;
-    finished = true;
-    cancelRateLoop();
+      let currentIndex   = 0;
+      let currentVid     = null;
+      let nextVid        = null;
+      let rateRAF        = null;
+      let finished       = false;
+      let blackFadeDone  = false;
 
-    // Fade audio out
-    const a1 = ambientAudio.volume;
-    const a2 = suspenseAudio.volume;
-    const D = 900;
-    const t0 = performance.now();
-    (function step(){
-      const p = Math.min(1,(performance.now()-t0)/D);
-      ambientAudio.volume = a1*(1-p);
-      suspenseAudio.volume = a2*(1-p);
-      if(p<1) requestAnimationFrame(step);
-      else{
-        try{ambientAudio.pause();}catch{}
-        try{suspenseAudio.pause();}catch{}
-        overlay.classList.remove('active');
-        overlay.innerHTML='';
-        const bf = document.getElementById('blackout');
-        bf.classList.remove('visible');
-        setTimeout(()=>bf.classList.remove('show'),500);
-        const videoBg = document.getElementById('videoBg');
-        if(videoBg) videoBg.style.opacity='1';
-        const bgVideo = document.getElementById('bg-video');
-        if(bgVideo){ try{ bgVideo.play(); }catch{} }
-        isCinematic = false;
-      }
-    })();
-  }
+      playVideo(0);
 
-/* Manual audio test shortcuts */
-document.addEventListener('keydown', e=>{
-  if(e.key==='a'){ console.log('Ambient test'); }
-  if(e.key==='s'){ console.log('Suspense test'); }
-});
-</script>
-<script>
-const $ = s => document.querySelector(s);
-let isCinematic = false;
-
-/* Config */
-const SOURCES=[
-  'Screensaver-1.mp4',
-  'Screensaver-2.mp4',
-  'Screensaver-3.mp4',
-  'Screensaver-4.mp4'
-];
-const CROSSFADE_SEC=3;
-const FIRST_RAMP_SEC=10;
-const FAST_RATE=5;
-const NAT_RATE=1.15;
-const FINAL_RATE=0.5;
-const MIN_TOTAL_MS=120000;
-const PLANET_TIME_HINT=12;          // fallback: seconds into video 4 if auto-detect fails
-const PLANET_DETECT_TIMEOUT_MS=8000;// give detection some time
-const SLOW_AFTER_PLANET_SEC=5;      // duration of gradual slowdown after planet appears
-
-/* Audio sources */
-const AMBIENT_SRC='ambient-space.mp3';
-const SUSPENSE_SRC='space-suspense.mp3';
-
-/* Preload (optional) */
-let preloadDone=false;
-(function preload(){
-  let done=0,total=SOURCES.length+2;
-  [...SOURCES,'ambient-space.mp3','space-suspense.mp3'].forEach(f=>{
-    const el=f.endsWith('.mp3')?document.createElement('audio'):document.createElement('video');
-    el.preload='metadata'; el.src=f;
-    el.addEventListener('loadedmetadata',mark,{once:true});
-    el.addEventListener('error',mark,{once:true});
-  });
-  function mark(){ if(++done>=total){ preloadDone=true; } }
-})();
-
-document.addEventListener('DOMContentLoaded',()=>{
-  $('#hiddenCelebrate')?.addEventListener('click',startCinematic);
-});
-
-/* Start */
-function startCinematic(){
-  if(isCinematic) return;
-  isCinematic = true;
-
-  const overlay = $('#warpOverlay');
-  const bgVideo = $('#bg-video');
-  const videoBg = $('#videoBg');
-  overlay.classList.add('active');
-  overlay.style.background = '#000';
-  overlay.innerHTML = '';
-
-  if(bgVideo){ try{ bgVideo.pause(); }catch{} }
-  if(videoBg) videoBg.style.opacity = '0';
-
-  // Audio elements (NOT muted)
-  const ambient = document.createElement('audio');
-  ambient.src = 'ambient-space.mp3';
-  ambient.loop = true;
-  ambient.volume = 0.7;
-  ambient.preload = 'auto';
-
-  const suspense = document.createElement('audio');
-  suspense.src = 'space-suspense.mp3';
-  suspense.loop = true;
-  suspense.volume = 0.0;
-  suspense.preload = 'auto';
-
-  overlay.appendChild(ambient);
-  overlay.appendChild(suspense);
-
-  // Try to play both, fallback to user gesture if blocked
-  function safePlay(a){
-    a.play().catch(()=>{
-      const resume = () => {
-        a.play().catch(()=>{});
-        document.removeEventListener('click', resume, true);
-        document.removeEventListener('keydown', resume, true);
-      };
-      document.addEventListener('click', resume, true);
-      document.addEventListener('keydown', resume, true);
-    });
-  }
-  safePlay(ambient);
-  suspense.load();
-
-  // State
-  let currentIndex=0;
-  let currentVid=null;
-  let nextVid=null;
-  let rateRAF=null;
-  let finished=false;
-  let planetDetected=false;
-  let slowdownStart=null;
-  let slowdownActive=false;
-  let startClock=performance.now();
-
-  playVideo(0);
-
-  function playVideo(i){
-    if(finished) return;
-    if(i>=SOURCES.length){ ensureTotalLength(); return; }
-
-    currentVid=createVideo(SOURCES[i]);
-    overlay.appendChild(currentVid);
-    currentVid.play().catch(()=>gesturePlay(currentVid));
-    currentVid.addEventListener('loadeddata',()=>requestAnimationFrame(()=>currentVid.style.opacity='1'));
-    currentVid.addEventListener('error',skipToNext);
-    currentVid.addEventListener('ended',skipToNext);
-
-    if(i+1<SOURCES.length){
-      nextVid=createVideo(SOURCES[i+1]);
-      overlay.appendChild(nextVid);
-    }else nextVid=null;
-
-    currentVid.addEventListener('loadedmetadata',()=>{
-      setupRate(i,currentVid);
-      if(nextVid){
-        scheduleCrossfade(currentVid.duration-CROSSFADE_SEC);
-      }
-      if(i===1){ crossfadeAudio(ambient,suspense,1200); }
-      if(i===3){ startPlanetDetection(currentVid); }
-    });
-  }
-
-  function createVideo(src){
-    const v=document.createElement('video');
-    v.className='warp-player';
-    v.muted=true; v.playsInline=true; v.autoplay=true; v.preload='auto';
-    v.loop=false; v.setAttribute('controlslist','nodownload nofullscreen noremoteplayback');
-    v.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity '+CROSSFADE_SEC+'s linear;background:#000';
-    const s=document.createElement('source'); s.src=src; s.type='video/mp4'; v.appendChild(s);
-    return v;
-  }
-
-  function scheduleCrossfade(at){
-    if(!currentVid||!nextVid) return;
-    function watch(){
-      if(!currentVid) return;
-      if(currentVid.currentTime>=at){
-        currentVid.removeEventListener('timeupdate',watch);
-        nextVid.play().catch(()=>gesturePlay(nextVid));
-        requestAnimationFrame(()=>{
-          nextVid.style.opacity='1';
-          currentVid.style.opacity='0';
-        });
-        setTimeout(()=>{
-          currentVid?.remove();
-          currentIndex++;
-          currentVid=nextVid; nextVid=null;
-          playVideo(currentIndex);
-        },CROSSFADE_SEC*1000+40);
-      }
-    }
-    currentVid.addEventListener('timeupdate',watch);
-  }
-
-  function skipToNext(){
-    currentIndex++;
-    currentVid?.remove();
-    if(nextVid){
-      currentVid=nextVid; nextVid=null;
-      currentVid.style.opacity='1';
-      currentVid.play().catch(()=>gesturePlay(currentVid));
-      playVideo(currentIndex);
-    }else ensureTotalLength();
-  }
-
-  function setupRate(i,vid){
-    cancelRateLoop();
-    const dur=vid.duration||0;
-    const rampEnd=Math.max(0,dur-CROSSFADE_SEC);
-    const rampStart=Math.max(0,rampEnd-FIRST_RAMP_SEC);
-
-    function loop(){
-      if(!vid||finished) return;
-      let rate=1;
-      const t=vid.currentTime;
-
-      if(i===0){
-        if(t<=rampStart) rate=1;
-        else if(t>=rampEnd) rate=FAST_RATE;
-        else {
-          const p=(t-rampStart)/(rampEnd-rampStart);
-          rate=1+(FAST_RATE-1)*(p<0.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2);
-        }
-      }else if(i===1){
-        rate=1;
-      }else if(i===2){
-        rate=NAT_RATE;
-      }else if(i===3){
-        if(planetDetected){
-          if(!slowdownActive){
-            slowdownActive=true;
-            slowdownStart=performance.now();
-          }
-          const p=Math.min(1,(performance.now()-slowdownStart)/(SLOW_AFTER_PLANET_SEC*1000));
-          rate=NAT_RATE-(NAT_RATE-FINAL_RATE)*(p<0.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2);
-          // Fade to black last 1s of slowdown
-          const remainingSlow = SLOW_AFTER_PLANET_SEC*1000 - (performance.now()-slowdownStart);
-          if(remainingSlow <= 1000) triggerBlackFade();
-        }else{
-          rate=NAT_RATE;
-        }
-      }
-
-      vid.playbackRate=rate;
-      rateRAF=requestAnimationFrame(loop);
-    }
-    loop();
-  }
-
-  function startPlanetDetection(video){
-    const canvas=document.createElement('canvas');
-    const ctx=canvas.getContext('2d');
-    canvas.width=160; canvas.height=90;
-    let attempts=0;
-    let fallbackStarted=false;
-    function sample(){
-      if(planetDetected||finished||video.paused||video.ended) return;
-      attempts++;
-      try{
-        ctx.drawImage(video,0,0,canvas.width,canvas.height);
-        const data=ctx.getImageData(0,0,canvas.width,canvas.height).data;
-        // Central area
-        let bright=0,total=0;
-        const x0=Math.floor(canvas.width*0.3),x1=Math.floor(canvas.width*0.7);
-        const y0=Math.floor(canvas.height*0.3),y1=Math.floor(canvas.height*0.7);
-        for(let y=y0;y<y1;y++){
-          for(let x=x0;x<x1;x++){
-            const i=(y*canvas.width+x)*4;
-            const r=data[i],g=data[i+1],b=data[i+2];
-            const lum=0.2126*r+0.7152*g+0.0722*b;
-            if(lum>170) bright++;
-            total++;
-          }
-        }
-        const ratio=bright/total;
-        // Heuristic: large bright central object
-        if(ratio>0.28){
-          planetDetected=true;
-          crossfadeAudio(suspense,ambient,1200);
+      function playVideo(i) {
+        if (finished) return;
+        if (i >= WARP_VIDEOS.length) {
+          finishCinematic(travelAudio, finalAudio, overlay, bgVideo, videoBg, blackout);
           return;
         }
-      }catch{}
-      if(!planetDetected){
-        if(attempts<200){
-          setTimeout(sample,150);
-        }else if(!fallbackStarted){
-          fallbackStarted=true;
-          setTimeout(()=>{
-            if(!planetDetected){
-              planetDetected=true;
-              crossfadeAudio(suspense,ambient,1200);
-            }
-          }, PLANET_DETECT_TIMEOUT_MS);
+
+        currentVid = createVideo(WARP_VIDEOS[i]);
+        overlay.appendChild(currentVid);
+
+        currentVid.play().catch(() => gesturePlay(currentVid));
+        currentVid.addEventListener('loadeddata', () => {
+          requestAnimationFrame(() => { currentVid.style.opacity = '1'; });
+        });
+        currentVid.addEventListener('error', skipToNext);
+        currentVid.addEventListener('ended', skipToNext);
+
+        if (i + 1 < WARP_VIDEOS.length) {
+          nextVid = createVideo(WARP_VIDEOS[i + 1]);
+          overlay.appendChild(nextVid);
+        } else {
+          nextVid = null;
+        }
+
+        currentVid.addEventListener('loadedmetadata', () => {
+          setupPlaybackRate(i, currentVid);
+
+          if (nextVid && isFinite(currentVid.duration)) {
+            const crossAt = Math.max(0, currentVid.duration - CROSSFADE_SEC);
+            scheduleCrossfade(crossAt);
+          }
+
+          // When entering last video, crossfade to final audio
+          if (i === WARP_VIDEOS.length - 1) {
+            crossfadeAudio(travelAudio, finalAudio, 1500);
+          }
+        });
+      }
+
+      function createVideo(src) {
+        const v = document.createElement('video');
+        v.className = 'warp-player';
+        v.muted = true;
+        v.playsInline = true;
+        v.autoplay = true;
+        v.preload = 'auto';
+        v.loop = false;
+        v.setAttribute('controlslist', 'nodownload nofullscreen noremoteplayback');
+        v.setAttribute('disablePictureInPicture', 'true');
+        v.setAttribute('webkit-playsinline', 'true');
+        v.setAttribute('playsinline', 'true');
+        v.removeAttribute('controls');
+        v.style.cssText = `
+          position:absolute;inset:0;width:100%;height:100%;
+          object-fit:cover;opacity:0;
+          transition:opacity ${CROSSFADE_SEC}s linear;
+          background:#000;
+        `;
+        const s = document.createElement('source');
+        s.src = src;
+        s.type = 'video/mp4';
+        v.appendChild(s);
+        return v;
+      }
+
+      function scheduleCrossfade(atTime) {
+        if (!currentVid || !nextVid || !isFinite(currentVid.duration)) return;
+
+        function watch() {
+          if (!currentVid || finished) return;
+          if (currentVid.currentTime >= atTime) {
+            currentVid.removeEventListener('timeupdate', watch);
+            nextVid.play().catch(() => gesturePlay(nextVid));
+            requestAnimationFrame(() => {
+              nextVid.style.opacity = '1';
+              currentVid.style.opacity = '0';
+            });
+            setTimeout(() => {
+              if (currentVid) currentVid.remove();
+              currentIndex++;
+              currentVid = nextVid;
+              nextVid = null;
+              playVideo(currentIndex);
+            }, CROSSFADE_SEC * 1000 + 50);
+          }
+        }
+
+        currentVid.addEventListener('timeupdate', watch);
+      }
+
+      function skipToNext() {
+        currentIndex++;
+        if (currentVid) currentVid.remove();
+        if (nextVid) {
+          currentVid = nextVid;
+          nextVid = null;
+          currentVid.style.opacity = '1';
+          currentVid.play().catch(() => gesturePlay(currentVid));
+          playVideo(currentIndex);
+        } else {
+          finishCinematic(travelAudio, finalAudio, overlay, bgVideo, videoBg, blackout);
         }
       }
+
+      function setupPlaybackRate(index, vid) {
+        cancelRateLoop();
+        const dur = vid.duration || 0;
+
+        function loop() {
+          if (!vid || finished) return;
+          const t = vid.currentTime;
+          let rate = 1;
+
+          if (index === 0) {
+            const accelStart = dur * 0.3;
+            const accelEnd   = Math.max(accelStart + 0.1, dur - CROSSFADE_SEC);
+            if (t <= accelStart) {
+              rate = 1;
+            } else if (t >= accelEnd) {
+              rate = FAST_RATE;
+            } else {
+              const p = (t - accelStart) / (accelEnd - accelStart);
+              rate = 1 + (FAST_RATE - 1) * easeInOutCubic(p);
+            }
+          } else if (index > 0 && index < WARP_VIDEOS.length - 1) {
+            rate = NORMAL_RATE;
+          } else {
+            if (isFinite(dur) && dur > 0) {
+              const slowStart = Math.max(0, dur - 5); // last 5 seconds
+              if (t <= slowStart) {
+                rate = NORMAL_RATE;
+              } else {
+                const p = (t - slowStart) / Math.max(0.001, dur - slowStart);
+                rate = NORMAL_RATE - (NORMAL_RATE - FINAL_MIN_RATE) * easeOutCubic(p);
+              }
+
+              if (!blackFadeDone && dur - t <= 1.0 && blackout) {
+                blackFadeDone = true;
+                blackout.classList.add('show');
+                requestAnimationFrame(() => blackout.classList.add('visible'));
+              }
+            }
+          }
+
+          vid.playbackRate = rate;
+          rateRAF = requestAnimationFrame(loop);
+        }
+
+        loop();
+      }
+
+      function easeInOutCubic(x) {
+        return x < 0.5
+          ? 4 * x * x * x
+          : 1 - Math.pow(-2 * x + 2, 3) / 2;
+      }
+
+      function easeOutCubic(x) {
+        return 1 - Math.pow(1 - x, 3);
+      }
+
+      function cancelRateLoop() {
+        if (rateRAF) cancelAnimationFrame(rateRAF);
+        rateRAF = null;
+      }
+
+      function safePlayAudio(a) {
+        if (!a) return;
+        a.play().catch(() => {
+          const resume = () => {
+            a.play().catch(() => {});
+            document.removeEventListener('click', resume, true);
+            document.removeEventListener('keydown', resume, true);
+          };
+          document.addEventListener('click', resume, true);
+          document.addEventListener('keydown', resume, true);
+        });
+      }
+
+      function crossfadeAudio(from, to, durationMs) {
+        const start     = performance.now();
+        const fromStart = from.volume;
+        const toStart   = to.volume;
+        safePlayAudio(to);
+
+        (function step() {
+          const p = Math.min(1, (performance.now() - start) / durationMs);
+          from.volume = fromStart * (1 - p);
+          to.volume   = toStart + (0.8 - toStart) * p;
+          if (p < 1) requestAnimationFrame(step);
+        })();
+      }
+
+      function gesturePlay(v) {
+        const resume = () => {
+          v.play().catch(() => {});
+          document.removeEventListener('click', resume, true);
+        };
+        document.addEventListener('click', resume, true);
+      }
+
+      function finishCinematic(travelAudio, finalAudio, overlay, bgVideo, videoBg, blackout) {
+        if (finished) return;
+        finished = true;
+        cancelRateLoop();
+
+        const v1 = travelAudio ? travelAudio.volume : 0;
+        const v2 = finalAudio ? finalAudio.volume : 0;
+        const D  = 900;
+        const t0 = performance.now();
+
+        (function fadeStep() {
+          const p = Math.min(1, (performance.now() - t0) / D);
+          if (travelAudio) travelAudio.volume = v1 * (1 - p);
+          if (finalAudio)  finalAudio.volume  = v2 * (1 - p);
+
+          if (p < 1) {
+            requestAnimationFrame(fadeStep);
+          } else {
+            try { travelAudio && travelAudio.pause(); } catch {}
+            try { finalAudio && finalAudio.pause(); } catch {}
+            overlay.classList.remove('active');
+            overlay.innerHTML = '';
+
+            if (blackout) {
+              blackout.classList.remove('visible');
+              setTimeout(() => blackout.classList.remove('show'), 500);
+            }
+
+            if (videoBg) videoBg.style.opacity = '1';
+            if (bgVideo) {
+              try { bgVideo.play(); } catch {}
+            }
+
+            // Resume main music after warp
+            if (window.mainMusic) {
+              try { window.mainMusic.play(); } catch {}
+            }
+
+            isCinematic = false;
+          }
+        })();
+      }
     }
-    sample();
-    // Fallback by hint time
-    video.addEventListener('timeupdate',()=>{
-      if(!planetDetected && video.currentTime>=PLANET_TIME_HINT){
-        planetDetected=true;
-        crossfadeAudio(suspense,ambient,1000);
+  </script>
+
+  <!-- === Theme Cycle Script === -->
+  <script>
+    (function themeCycleInit(){
+      const btn = document.getElementById('themeToggleBtn');
+      const classes = ['theme-a','theme-b','theme-c','theme-d','theme-e'];
+      let idx = 0;
+
+      function apply(){
+        document.body.classList.remove(...classes);
+        document.body.classList.add(classes[idx]);
       }
-    });
-  }
-
-  function triggerBlackFade(){
-    const bf=$('#blackout');
-    if(!bf) return;
-    bf.classList.add('show');
-    requestAnimationFrame(()=>bf.classList.add('visible'));
-  }
-
-  function ensureTotalLength(){
-    const elapsed=performance.now()-startClock;
-    if(elapsed<MIN_TOTAL_MS){
-      if(!currentVid){
-        currentVid=createVideo(SOURCES[SOURCES.length-1]);
-        overlay.appendChild(currentVid);
-        currentVid.play().catch(()=>gesturePlay(currentVid));
+      function next(){
+        idx = (idx + 1) % classes.length;
+        apply();
+        // Light pulse feedback
+        document.body.animate([
+          {filter:'brightness(3)'},
+          {filter:'brightness(1.25)'},
+          {filter:'brightness(3)'},
+          {filter:'brightness(1)'}
+        ],{duration:600,easing:'cubic-bezier(0.5,0,0.5,1)',fill:'forwards'});
       }
-      currentVid.loop=true;
-      setupRate(SOURCES.length-1,currentVid);
-      setTimeout(()=>finish(),MIN_TOTAL_MS-elapsed);
-    }else finish();
-  }
 
-  function finish(){
-    if(finished) return;
-    finished=true;
-    cancelRateLoop();
-    // Final fade already active; delay clear
-    fadeOutAudio(()=> {
-      overlay.classList.remove('active');
-      overlay.innerHTML='';
-      const bf=$('#blackout');
-      bf.classList.remove('visible');
-      setTimeout(()=>bf.classList.remove('show'),600);
-      if(videoBg) videoBg.style.opacity='1';
-      const bgVideo=$('#bg-video');
-      if(bgVideo){try{bgVideo.play();}catch{}}
-      isCinematic=false;
-    });
-  }
-
-  function fadeOutAudio(cb){
-    const a1=ambient.volume,a2=suspense.volume;
-    const D=900,t0=performance.now();
-    (function step(){
-      const p=Math.min(1,(performance.now()-t0)/D);
-      ambient.volume=a1*(1-p);
-      suspense.volume=a2*(1-p);
-      if(p<1) requestAnimationFrame(step); else{
-        try{ambient.pause();}catch{}
-        try{suspense.pause();}catch{}
-        cb&&cb();
-      }
+      // Init
+      apply();
+      btn.addEventListener('click',next);
+      document.addEventListener('keydown',e=>{ if(e.key==='t') next(); });
     })();
-  }
-
-  function crossfadeAudio(from,to,dur){
-    const start=performance.now();
-    const f0=from.volume,t0=to.volume;
-    safePlay(to);
-    (function step(){
-      const p=Math.min(1,(performance.now()-start)/dur);
-      from.volume=f0*(1-p);
-      to.volume=t0+(0.55-t0)*p;
-      if(p<1) requestAnimationFrame(step);
-    })();
-  }
-
-  function gesturePlay(v){
-    const resume=()=>{ v.play().catch(()=>{}); document.removeEventListener('click',resume,true); };
-    document.addEventListener('click',resume,true);
-  }
-
-  function safePlay(a){
-    a.play().catch(()=> {
-      const resume=()=>{a.play().catch(()=>{});document.removeEventListener('click',resume,true);};
-      document.addEventListener('click',resume,true);
-    });
-  }
-
-  function cancelRateLoop(){ if(rateRAF) cancelAnimationFrame(rateRAF); rateRAF=null; }
-}
-</script>
-<script>
-(function themeCycleInit(){
-  const btn = document.getElementById('themeToggleBtn');
-  const classes = ['theme-a','theme-b','theme-c','theme-d','theme-e'];
-  let idx = 0;
-
-  function apply(){
-    document.body.classList.remove(...classes);
-    document.body.classList.add(classes[idx]);
-  }
-  function next(){
-    idx = (idx + 1) % classes.length;
-    apply();
-    // Light pulse feedback
-    document.body.animate([
-      {filter:'brightness(3)'},
-      {filter:'brightness(1.25)'},
-      {filter:'brightness(3)'},
-      {filter:'brightness(1)'}
-    ],{duration:600,easing:'cubic-bezier(0.5,0,0.5,1)',fill:'forwards'});
-  }
-
-  // Init
-  apply();
-  btn.addEventListener('click',next);
-  document.addEventListener('keydown',e=>{ if(e.key==='t') next(); });
-})();
-</script>
+  </script>
 </body>
 </html>
