@@ -206,7 +206,7 @@
         <button id="themeToggleBtn" class="btn" title="Theme change (T)">Theme change</button>
         <button id="mouseTrailToggleBtn" class="btn" title="Toggle mouse trail (M)">Mouse Trail</button>
         <div class="volume-wrapper">
-          <span>Volume</span>
+          <label for="volumeSlider"><span>Volume</span></label>
           <input id="volumeSlider" type="range" min="0" max="1" step="0.01" value="0.25" title="Adjust volume" />
         </div>
       </div>
@@ -699,6 +699,9 @@
           v3.muted = true;
           overlay.appendChild(v3);
           v3.play().catch(()=>{});
+
+          // *** make sure Screensaver-5 is visible ***
+          requestAnimationFrame(()=>{ v3.style.opacity = '1'; });
 
           overlay.appendChild(alienAudio);
 
