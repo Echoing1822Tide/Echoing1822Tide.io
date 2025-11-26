@@ -56,7 +56,7 @@
       --bg-color: #000;
     }
 
-    /* Theme variants */
+    /* === Enhanced Theme Variants (dramatic changes) === */
     body.theme-a {
       --accent-cyan:#00ffe0; --accent-magenta:#ff5ae6; --panel-bg:rgba(5,15,40,.65);
       font-family:'Segoe UI',system-ui,sans-serif;
@@ -111,7 +111,7 @@
     .retro-overlay{position:fixed;inset:0;z-index:1;pointer-events:none;background-image:linear-gradient(transparent 60%, rgba(0,0,0,0.12) 100%), radial-gradient(circle at 50% 10%, rgba(255,255,255,0.03), transparent 20%);mix-blend-mode:overlay}
 
     /* Blackout overlay for fade-to-black */
-    #blackout{position:fixed;inset:0;background:#000;z-index:9000;opacity:0;pointer-events:none;transition:opacity 0.8s ease;display:none}
+    #blackout{position:fixed;inset:0;background:#000;z-index:9000;opacity:0;pointer-events:none;transition:opacity .8s ease;display:none}
     #blackout.show{display:block}
     #blackout.visible{opacity:1}
 
@@ -134,15 +134,16 @@
     .btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(0,0,0,.55);background:rgba(0,0,0,0.7)}
     .linkedin-btn{background:linear-gradient(90deg,#0077b5,#00a0dc);color:#fff;border:none;padding:.6rem 1rem}
 
-    .volume-control{
+    .volume-wrapper{
       display:flex;
       align-items:center;
       gap:.4rem;
       font-size:.85rem;
       color:var(--muted);
     }
-    .volume-control input[type="range"]{
-      width:140px;
+    .volume-wrapper input[type="range"]{
+      width:110px;
+      cursor:pointer;
     }
 
     .panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem;width:min(1100px,100%);margin:0 auto}
@@ -169,38 +170,12 @@
     #hiddenCelebrate:hover{opacity:0.1}
 
     /* Warp speed overlay */
-    .warp-overlay{position:fixed;inset:0;z-index:10000;pointer-events:none;display:none;overflow:hidden}
+    .warp-overlay{position:fixed;inset:0;z-index:10000;pointer-events:none;display:none;overflow:hidden;background:#000}
     .warp-overlay.active{display:block}
-    .star{position:absolute;background:white;border-radius:50%;will-change:transform,width,height,opacity}
-
-    .warp-overlay video.warp-player{
-      position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
-      background:#000;
-    }
 
     /* cursor trail */
-    .cursor-core{
-      position:fixed;
-      width:18px;height:18px;
-      border-radius:50%;
-      background:radial-gradient(circle, var(--accent-cyan), var(--accent-magenta));
-      pointer-events:none;
-      z-index:9999;
-      mix-blend-mode:screen;
-      transform:translate(-50%,-50%);
-      opacity:.95;
-      transition:transform .06s linear;
-      box-shadow:0 0 20px var(--accent-cyan), 0 0 40px var(--accent-magenta);
-      display:none;
-    }
-    .cursor-trail-dot{
-      position:fixed;
-      border-radius:50%;
-      pointer-events:none;
-      z-index:9998;
-      mix-blend-mode:screen;
-      transition:transform .08s linear,opacity .25s linear;
-    }
+    .cursor-core{position:fixed;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle, var(--accent-cyan), var(--accent-magenta));pointer-events:none;z-index:9999;mix-blend-mode:screen;transform:translate(-50%,-50%);opacity:.95;transition:transform .06s linear;box-shadow:0 0 20px var(--accent-cyan), 0 0 40px var(--accent-magenta);display:none}
+    .cursor-trail-dot{position:fixed;border-radius:50%;pointer-events:none;z-index:9998;mix-blend-mode:screen;transition:transform .08s linear,opacity .2s linear}
 
     @media(max-width:520px){
       main.container{padding:2rem 1rem}
@@ -208,7 +183,7 @@
     }
   </style>
 </head>
-<body data-theme="neon" class="theme-a">
+<body data-theme="neon">
   <!-- Main background music -->
   <audio id="main-music" src="Back-to-the-Future-(End Credits).mp3" loop></audio>
 
@@ -230,9 +205,9 @@
         <a class="btn linkedin-btn" href="https://www.linkedin.com/in/james-e-gill" target="_blank" rel="noopener noreferrer">Connect on LinkedIn</a>
         <button id="themeToggleBtn" class="btn" title="Theme change (T)">Theme change</button>
         <button id="mouseTrailToggleBtn" class="btn" title="Toggle mouse trail (M)">Mouse Trail</button>
-        <div class="volume-control">
+        <div class="volume-wrapper">
           <span>Volume</span>
-          <input id="volumeSlider" type="range" min="0" max="100" value="25" />
+          <input id="volumeSlider" type="range" min="0" max="1" step="0.01" value="0.25" title="Adjust volume" />
         </div>
       </div>
     </div>
@@ -370,45 +345,52 @@
   <!-- cursor elements -->
   <div id="cursorCore" class="cursor-core" aria-hidden="true"></div>
 
-  <!-- === Core JS: music, panels, volume, mouse trail === -->
   <script>
-    const mainMusic = document.getElementById('main-music');
-    const volumeSlider = document.getElementById('volumeSlider');
+    // ===== Shared helpers & global audio registry =====
+    const qs = sel => document.querySelector(sel);
 
-    // Global audio references used by cinematic
-    window.__travelAudio = null;
-    window.__blenderAudio = null;
-    window.__alienAudio = null;
+    let globalVolume = 0.25; // 25% start
+    const audioSet = new Set();
 
-    let globalVolume = 0.25; // 25%
-
-    function applyVolume(){
-      if (mainMusic) mainMusic.volume = globalVolume;
-
-      if (window.__travelAudio) window.__travelAudio.volume = globalVolume;
-      if (window.__blenderAudio) window.__blenderAudio.volume = globalVolume;
-      if (window.__alienAudio)  window.__alienAudio.volume  = globalVolume;
+    function registerAudio(a){
+      if(!a) return;
+      audioSet.add(a);
+      a.volume = globalVolume;
     }
-
-    // Try to start main music immediately, and also on first user gesture (for autoplay policies)
-    function tryStartMainMusic() {
-      if (!mainMusic) return;
-      mainMusic.volume = globalVolume;
-      mainMusic.play().catch(() => {
-        // Autoplay blocked; we'll start on first user gesture
-        const resume = () => {
-          mainMusic.volume = globalVolume;
-          mainMusic.play().catch(()=>{});
-          document.removeEventListener('click', resume, true);
-          document.removeEventListener('keydown', resume, true);
-        };
-        document.addEventListener('click', resume, true);
-        document.addEventListener('keydown', resume, true);
+    function unregisterAudio(a){
+      if(!a) return;
+      audioSet.delete(a);
+    }
+    function applyVolume(){
+      audioSet.forEach(a => {
+        try { a.volume = globalVolume; } catch {}
       });
     }
 
+    // ===== Main music autoplay (best-effort, subject to browser policy) =====
+    const mainMusic = document.getElementById('main-music');
+    if(mainMusic){
+      mainMusic.loop = true;
+      registerAudio(mainMusic);
+
+      function tryPlayMainMusic(){
+        mainMusic.play().catch(() => {
+          // hook first user gesture
+          const resume = () => {
+            mainMusic.play().catch(()=>{});
+            document.removeEventListener('pointerdown', resume, true);
+            document.removeEventListener('keydown', resume, true);
+          };
+          document.addEventListener('pointerdown', resume, true);
+          document.addEventListener('keydown', resume, true);
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', tryPlayMainMusic);
+    }
+
+    // ===== Panels (buttons 1–5) =====
     document.addEventListener('DOMContentLoaded', () => {
-      // Panel toggling
       const panels = Array.from(document.querySelectorAll('.panel'));
 
       function closeAll() {
@@ -444,411 +426,356 @@
           }
         });
       });
+    });
 
-      // Theme cycle
-      (function themeCycleInit(){
-        const btn = document.getElementById('themeToggleBtn');
-        const classes = ['theme-a','theme-b','theme-c','theme-d','theme-e'];
-        let idx = 0;
+    // ===== Theme cycle =====
+    (function themeCycleInit(){
+      const btn = document.getElementById('themeToggleBtn');
+      if(!btn) return;
 
-        function applyTheme(){
-          document.body.classList.remove(...classes);
-          document.body.classList.add(classes[idx]);
+      const classes = ['theme-a','theme-b','theme-c','theme-d','theme-e'];
+      let idx = 0;
+
+      function apply(){
+        document.body.classList.remove(...classes);
+        document.body.classList.add(classes[idx]);
+      }
+      function next(){
+        idx = (idx + 1) % classes.length;
+        apply();
+        document.body.animate(
+          [
+            {filter:'brightness(3)'},
+            {filter:'brightness(1.25)'},
+            {filter:'brightness(3)'},
+            {filter:'brightness(1)'}
+          ],
+          {duration:600,easing:'cubic-bezier(0.5,0,0.5,1)',fill:'forwards'}
+        );
+      }
+
+      apply();
+      btn.addEventListener('click',next);
+      document.addEventListener('keydown',e=>{ if(e.key==='t') next(); });
+    })();
+
+    // ===== Mouse trail =====
+    (function mouseTrailInit(){
+      const core = document.getElementById('cursorCore');
+      const toggleBtn = document.getElementById('mouseTrailToggleBtn');
+      if(!core || !toggleBtn) return;
+
+      let enabled = false;
+      let trailDots = [];
+
+      function enableTrail(){
+        enabled = true;
+        core.style.display = 'block';
+      }
+      function disableTrail(){
+        enabled = false;
+        core.style.display = 'none';
+        trailDots.forEach(dot => dot.remove());
+        trailDots = [];
+      }
+
+      toggleBtn.addEventListener('click', ()=>{
+        enabled ? disableTrail() : enableTrail();
+      });
+      document.addEventListener('keydown', e=>{
+        if(e.key.toLowerCase() === 'm'){
+          enabled ? disableTrail() : enableTrail();
         }
-        function nextTheme(){
-          idx = (idx + 1) % classes.length;
-          applyTheme();
-          document.body.animate(
-            [
-              {filter:'brightness(3)'},
-              {filter:'brightness(1.25)'},
-              {filter:'brightness(3)'},
-              {filter:'brightness(1)'}
-            ],
-            {duration:600,easing:'cubic-bezier(0.5,0,0.5,1)',fill:'forwards'}
-          );
-        }
+      });
 
-        applyTheme();
-        btn.addEventListener('click', nextTheme);
-        document.addEventListener('keydown', e => {
-          if (e.key === 't' || e.key === 'T') nextTheme();
+      document.addEventListener('mousemove', e=>{
+        if(!enabled) return;
+        core.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+
+        const dot = document.createElement('div');
+        dot.className = 'cursor-trail-dot';
+        dot.style.width = '8px';
+        dot.style.height = '8px';
+        dot.style.background = 'radial-gradient(circle, var(--accent-cyan), transparent)';
+        dot.style.left = e.clientX + 'px';
+        dot.style.top = e.clientY + 'px';
+        dot.style.opacity = '0.9';
+        document.body.appendChild(dot);
+        trailDots.push(dot);
+
+        requestAnimationFrame(()=>{
+          dot.style.transform = 'translateY(8px)';
+          dot.style.opacity = '0';
         });
-      })();
+        setTimeout(()=>{
+          dot.remove();
+          trailDots = trailDots.filter(d => d !== dot);
+        }, 350);
+      });
+    })();
 
-      // Mouse trail
-      (function mouseTrailInit(){
-        const btn = document.getElementById('mouseTrailToggleBtn');
-        const core = document.getElementById('cursorCore');
-        let enabled = false;
-        let moveHandler = null;
+    // ===== Volume slider wiring =====
+    (function volumeInit(){
+      const slider = document.getElementById('volumeSlider');
+      if(!slider) return;
 
-        function enableTrail(){
-          if (enabled) return;
-          enabled = true;
-          document.body.style.cursor = 'none';
-          if (core) core.style.display = 'block';
-
-          moveHandler = (e)=>{
-            if (!core) return;
-            const x = e.clientX;
-            const y = e.clientY;
-            core.style.left = x + 'px';
-            core.style.top  = y + 'px';
-
-            const dot = document.createElement('div');
-            dot.className = 'cursor-trail-dot';
-            const size = 10 + Math.random()*6;
-            dot.style.width = size+'px';
-            dot.style.height = size+'px';
-            dot.style.left = x+'px';
-            dot.style.top  = y+'px';
-            dot.style.background = 'radial-gradient(circle, rgba(0,255,255,.9), rgba(255,0,255,.1))';
-            document.body.appendChild(dot);
-            requestAnimationFrame(()=>{
-              dot.style.opacity='0';
-              dot.style.transform='translate3d(0,4px,0) scale(0.8)';
-            });
-            setTimeout(()=>dot.remove(),260);
-          };
-          document.addEventListener('mousemove', moveHandler);
-        }
-
-        function disableTrail(){
-          if (!enabled) return;
-          enabled = false;
-          document.body.style.cursor = '';
-          if (core) core.style.display = 'none';
-          if (moveHandler) document.removeEventListener('mousemove', moveHandler);
-          moveHandler = null;
-          document.querySelectorAll('.cursor-trail-dot').forEach(d=>d.remove());
-        }
-
-        btn.addEventListener('click', ()=>{
-          if (enabled) disableTrail(); else enableTrail();
-        });
-
-        document.addEventListener('keydown', e=>{
-          if (e.key === 'm' || e.key === 'M'){
-            if (enabled) disableTrail(); else enableTrail();
-          }
-        });
-      })();
-
-      // Volume slider
-      volumeSlider.addEventListener('input', () => {
-        const value = parseInt(volumeSlider.value, 10) || 0;
-        globalVolume = Math.max(0, Math.min(1, value / 100));
+      slider.addEventListener('input', ()=>{
+        globalVolume = parseFloat(slider.value) || 0;
         applyVolume();
       });
 
-      // Start main music attempt
-      tryStartMainMusic();
+      // Apply initial 25%
       applyVolume();
-    });
-  </script>
+    })();
 
-  <!-- === Hidden button cinematic === -->
-  <script>
-    const $ = s => document.querySelector(s);
-    let isCinematic = false;
+    // ===== Hidden button cinematic (Screensaver-1, -4, -5) =====
+    (function cinematicInit(){
+      const hiddenBtn = document.getElementById('hiddenCelebrate');
+      if(!hiddenBtn) return;
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const btn = $('#hiddenCelebrate');
-      if (btn) btn.addEventListener('click', startCinematic);
-    });
+      let isCinematic = false;
 
-    const WARP_VIDEOS = [
-      'Screensaver-1.mp4',
-      'Screensaver-4.mp4',
-      'Screensaver-5.mp4'
-    ];
+      const STAGE1_VIDEO = 'Screensaver-1.mp4';
+      const STAGE2_VIDEO = 'Screensaver-4.mp4';
+      const STAGE3_VIDEO = 'Screensaver-5.mp4';
 
-    const TRAVEL_SRC = 'Travel-through-space.mp3';
-    const BLENDER_SRC = 'Blender-Hyperspace-Jump.mp3';
-    const ALIEN_SRC  = 'Alien-Beach-Waves.mp3';
+      const AUDIO_TRAVEL = 'Travel-through-space.mp3';
+      const AUDIO_BLENDER = 'Blender-Hyperspace-Jump.mp3';
+      const AUDIO_ALIEN  = 'Alien-Beach-Waves.mp3';
 
-    const CROSSFADE_SEC = 2.0;   // overlap between 1 and 4
-    const ALIEN_PLAY_MS = 60000; // 60 seconds
-    const BLACK_FADE_MS = 3000;  // 3s fade to black
+      const VIDEO_CROSSFADE_SEC = 2;      // overlap 2s
+      const BLACK_HOLD_SEC       = 3;      // black between segments
+      const ALIEN_PLAY_MS        = 60000;  // 60s
+      const ALIEN_FADE_MS        = 1500;
 
-    function safePlayAudio(audio) {
-      audio.play().catch(() => {
-        const resume = () => {
-          audio.play().catch(()=>{});
-          document.removeEventListener('click', resume, true);
-          document.removeEventListener('keydown', resume, true);
-        };
-        document.addEventListener('click', resume, true);
-        document.addEventListener('keydown', resume, true);
-      });
-    }
+      hiddenBtn.addEventListener('click', startCinematic);
 
-    function crossfadeAudio(from, to, durationMs) {
-      const start = performance.now();
-      const fromStart = from ? from.volume : 0;
-      const toStart   = to ? to.volume   : 0;
-      if (to) safePlayAudio(to);
+      function startCinematic(){
+        if(isCinematic) return;
+        isCinematic = true;
 
-      function step(){
-        const p = Math.min(1, (performance.now() - start) / durationMs);
-        if (from) from.volume = fromStart * (1 - p);
-        if (to)   to.volume   = toStart + ( (window.globalVolume || 0.25) - toStart ) * p;
-        if (p < 1 && isCinematic) requestAnimationFrame(step);
-      }
-      requestAnimationFrame(step);
-    }
+        const overlay  = qs('#warpOverlay');
+        const bgVideo  = qs('#bg-video');
+        const videoBg  = qs('#videoBg');
+        const blackout = qs('#blackout');
+        if(!overlay) return;
 
-    function fadeToBlack(blackout, durationMs) {
-      if (!blackout) return;
-      blackout.style.transition = `opacity ${durationMs/1000}s ease`;
-      blackout.classList.add('show');
-      requestAnimationFrame(()=> blackout.classList.add('visible'));
-    }
+        overlay.classList.add('active');
+        overlay.innerHTML = '';
 
-    function fadeFromBlack(blackout, durationMs) {
-      if (!blackout) return;
-      blackout.style.transition = `opacity ${durationMs/1000}s ease`;
-      blackout.classList.remove('visible');
-      setTimeout(()=> blackout.classList.remove('show'), durationMs + 100);
-    }
+        if(videoBg) videoBg.style.opacity = '0';
+        if(bgVideo){
+          try{ bgVideo.pause(); }catch{}
+        }
 
-    function startCinematic() {
-      if (isCinematic) return;
-      isCinematic = true;
+        // Pause main music while cinematic runs
+        if(mainMusic){
+          try{ mainMusic.pause(); }catch{}
+        }
 
-      const overlay  = $('#warpOverlay');
-      const bgVideo  = $('#bg-video');
-      const videoBg  = $('#videoBg');
-      const blackout = $('#blackout');
+        // Stage audios
+        const travelAudio = new Audio(AUDIO_TRAVEL);
+        travelAudio.loop = true;
+        registerAudio(travelAudio);
 
-      if (!overlay) return;
+        const blenderAudio = new Audio(AUDIO_BLENDER);
+        blenderAudio.loop = false;
+        registerAudio(blenderAudio);
 
-      overlay.classList.add('active');
-      overlay.style.background = '#000';
-      overlay.innerHTML = '';
+        const alienAudio = new Audio(AUDIO_ALIEN);
+        alienAudio.loop = false;
+        registerAudio(alienAudio);
 
-      // Pause main music during cinematic
-      if (window.mainMusic) {
-        try { window.mainMusic.pause(); } catch {}
-      }
+        applyVolume();
 
-      if (bgVideo) { try { bgVideo.pause(); } catch {} }
-      if (videoBg) videoBg.style.opacity = '0';
+        // Stage 1: Screensaver-1 + Travel audio
+        let v1, v2, v3;
+        let stage2Started = false;
 
-      // Create audios
-      const travelAudio = document.createElement('audio');
-      travelAudio.src = TRAVEL_SRC;
-      travelAudio.loop = true;
-      travelAudio.preload = 'auto';
+        function createVideo(src){
+          const vid = document.createElement('video');
+          vid.src = src;
+          vid.className = 'warp-player';
+          vid.autoplay = true;
+          vid.muted = true;
+          vid.loop = false;
+          vid.preload = 'auto';
+          vid.style.position = 'absolute';
+          vid.style.inset = '0';
+          vid.style.width = '100%';
+          vid.style.height = '100%';
+          vid.style.objectFit = 'cover';
+          vid.style.opacity = '0';
+          vid.style.transition = `opacity ${VIDEO_CROSSFADE_SEC}s linear`;
+          return vid;
+        }
 
-      const blenderAudio = document.createElement('audio');
-      blenderAudio.src = BLENDER_SRC;
-      blenderAudio.loop = false;
-      blenderAudio.preload = 'auto';
+        overlay.appendChild(travelAudio);
+        overlay.appendChild(blenderAudio);
+        overlay.appendChild(alienAudio);
 
-      const alienAudio = document.createElement('audio');
-      alienAudio.src = ALIEN_SRC;
-      alienAudio.loop = true; // will be stopped after 60s
-      alienAudio.preload = 'auto';
+        travelAudio.play().catch(()=>{});
+        v1 = createVideo(STAGE1_VIDEO);
+        overlay.appendChild(v1);
+        v1.play().catch(()=>{});
 
-      overlay.appendChild(travelAudio);
-      overlay.appendChild(blenderAudio);
-      overlay.appendChild(alienAudio);
+        v1.addEventListener('loadedmetadata', ()=>{
+          const duration = v1.duration || 0;
+          const crossAt = Math.max(0, duration - VIDEO_CROSSFADE_SEC - 0.1);
 
-      window.__travelAudio = travelAudio;
-      window.__blenderAudio = blenderAudio;
-      window.__alienAudio  = alienAudio;
-      applyVolume();
-
-      // Stage state
-      let currentVideo = null;
-      let nextVideo = null;
-      let stage = 1;
-      let alienTimeout = null;
-      let finishTimeout = null;
-
-      // Start stage 1
-      startStage1();
-
-      // === Stage 1: Screensaver-1 + Travel ===
-      function startStage1(){
-        safePlayAudio(travelAudio);
-        blenderAudio.volume = 0;
-        alienAudio.volume = 0;
-
-        currentVideo = createVideo(WARP_VIDEOS[0]);
-        overlay.appendChild(currentVideo);
-
-        currentVideo.addEventListener('loadeddata', () => {
-          requestAnimationFrame(()=> currentVideo.style.opacity = '1');
-        });
-
-        currentVideo.play().catch(()=> gesturePlay(currentVideo));
-
-        currentVideo.addEventListener('loadedmetadata', ()=>{
-          const dur = currentVideo.duration || 0;
-          const crossAt = Math.max(0, dur - CROSSFADE_SEC);
-          currentVideo.addEventListener('timeupdate', function handler(){
-            if (currentVideo.currentTime >= crossAt) {
-              currentVideo.removeEventListener('timeupdate', handler);
+          v1.addEventListener('timeupdate', function onTime(){
+            if(stage2Started) return;
+            if(v1.currentTime >= crossAt){
+              v1.removeEventListener('timeupdate', onTime);
               startStage2();
             }
           });
         });
-      }
 
-      // === Stage 2: Screensaver-4 + Blender ===
-      function startStage2(){
-        if (stage !== 1) return;
-        stage = 2;
+        requestAnimationFrame(()=>{ v1.style.opacity = '1'; });
 
-        nextVideo = createVideo(WARP_VIDEOS[1]);
-        nextVideo.style.opacity = '0';
-        overlay.appendChild(nextVideo);
+        function startStage2(){
+          if(stage2Started) return;
+          stage2Started = true;
 
-        nextVideo.addEventListener('loadeddata', () => {
-          nextVideo.play().catch(()=> gesturePlay(nextVideo));
-          // Crossfade videos
-          const vidA = currentVideo;
-          const vidB = nextVideo;
-          const start = performance.now();
-          const durMs = CROSSFADE_SEC * 1000;
-          function step(){
-            const p = Math.min(1, (performance.now()-start)/durMs);
-            vidA.style.opacity = String(1-p);
-            vidB.style.opacity = String(p);
-            if (p < 1 && isCinematic) requestAnimationFrame(step);
-            else {
-              if (vidA && vidA.parentNode) vidA.parentNode.removeChild(vidA);
-              currentVideo = vidB;
-              nextVideo = null;
-              currentVideo.loop = true;
-            }
-          }
-          requestAnimationFrame(step);
-        });
+          v2 = createVideo(STAGE2_VIDEO);
+          overlay.appendChild(v2);
+          v2.play().catch(()=>{});
 
-        // Crossfade audio Travel -> Blender
-        blenderAudio.volume = 0;
-        crossfadeAudio(travelAudio, blenderAudio, 1500);
-
-        // When Blender finishes, go to Stage 3
-        blenderAudio.addEventListener('ended', ()=>{
-          if (!isCinematic || stage !== 2) return;
-          stage = 2.5; // transitional
-          if (currentVideo) currentVideo.pause();
-          fadeToBlack(blackout, BLACK_FADE_MS);
+          // crossfade visuals
+          requestAnimationFrame(()=>{
+            v2.style.opacity = '1';
+            v1.style.opacity = '0';
+          });
           setTimeout(()=>{
-            // clear old content and go to stage 3
-            overlay.innerHTML = '';
-            overlay.appendChild(alienAudio);
-            window.__travelAudio = null;
-            window.__blenderAudio = null;
-            startStage3(blackout);
-          }, BLACK_FADE_MS + 50);
-        });
-      }
+            if(v1){ v1.remove(); v1=null; }
+          }, VIDEO_CROSSFADE_SEC*1000 + 80);
 
-      // === Stage 3: Screensaver-5 + Alien beach waves, 60s ===
-      function startStage3(blackout){
-        stage = 3;
-
-        // ensure travel/blender stopped
-        try { travelAudio.pause(); } catch {}
-        try { blenderAudio.pause(); } catch {}
-        travelAudio.volume = 0;
-        blenderAudio.volume = 0;
-
-        currentVideo = createVideo(WARP_VIDEOS[2]);
-        currentVideo.muted = true;
-        currentVideo.loop = true; // but we'll time-limit it to 60s
-
-        overlay.appendChild(currentVideo);
-        currentVideo.addEventListener('loadeddata', () => {
-          currentVideo.play().catch(()=> gesturePlay(currentVideo));
-        });
-
-        // Fade from black into this stage
-        fadeFromBlack(blackout, 800);
-
-        // Start Alien audio with fade-in
-        alienAudio.volume = 0;
-        safePlayAudio(alienAudio);
-        const targetVol = window.globalVolume || 0.25;
-        const fadeInStart = performance.now();
-        const fadeInDur = 1500;
-        function fadeInStep(){
-          const p = Math.min(1,(performance.now()-fadeInStart)/fadeInDur);
-          alienAudio.volume = targetVol * p;
-          if (p < 1 && isCinematic && stage === 3) requestAnimationFrame(fadeInStep);
-        }
-        requestAnimationFrame(fadeInStep);
-
-        // After 60 seconds, fade out alien, fade to black 3s, then finish
-        alienTimeout = setTimeout(()=>{
-          // fade out audio
+          // crossfade audio Travel -> Blender
           const start = performance.now();
-          const startVol = alienAudio.volume;
-          const outDur = 1500;
-          function outStep(){
-            const p = Math.min(1,(performance.now()-start)/outDur);
-            alienAudio.volume = startVol * (1-p);
-            if (p < 1 && isCinematic && stage === 3) requestAnimationFrame(outStep);
-            else { try{alienAudio.pause();}catch{} }
+          const travelStartVol  = travelAudio.volume;
+          blenderAudio.volume = 0;
+          blenderAudio.currentTime = 0;
+          blenderAudio.play().catch(()=>{});
+
+          (function step(){
+            const p = Math.min(1, (performance.now() - start)/1200);
+            try{
+              travelAudio.volume = travelStartVol*(1-p);
+              blenderAudio.volume = globalVolume * p;
+            }catch{}
+            if(p < 1) requestAnimationFrame(step);
+          })();
+
+          // When Blender audio ends: pause v2 and go to Stage 3
+          blenderAudio.addEventListener('ended', ()=>{
+            try{ travelAudio.pause(); }catch{}
+            if(v2){
+              try{ v2.pause(); }catch{}
+            }
+            startBlackToStage3();
+          }, { once:true });
+        }
+
+        function startBlackToStage3(){
+          const blackout = qs('#blackout');
+          if(blackout){
+            blackout.classList.add('show');
+            requestAnimationFrame(()=> blackout.classList.add('visible'));
           }
-          requestAnimationFrame(outStep);
 
-          // Fade to black and finish
-          fadeToBlack(blackout, BLACK_FADE_MS);
-          finishTimeout = setTimeout(()=> {
-            finishCinematic(overlay, bgVideo, videoBg, blackout);
-          }, BLACK_FADE_MS + 50);
-        }, ALIEN_PLAY_MS);
-      }
+          setTimeout(()=>{
+            // clear current overlay content except overlay itself
+            overlay.innerHTML = '';
+            startStage3(overlay, blackout, alienAudio, bgVideo, videoBg);
+          }, BLACK_HOLD_SEC * 1000);
+        }
 
-      function createVideo(src){
-        const vid = document.createElement('video');
-        vid.className = 'warp-player';
-        vid.src = src;
-        vid.autoplay = true;
-        vid.muted = true;
-        vid.loop = false;
-        vid.preload = 'auto';
-        vid.style.opacity = '0';
-        vid.style.transition = 'opacity 1.0s linear';
-        return vid;
-      }
+        function startStage3(overlay, blackout, alienAudio, bgVideo, videoBg){
+          // Stage 3: Screensaver-5 + Alien beach waves (60s)
+          overlay.classList.add('active');
 
-      function gesturePlay(video){
-        video.muted = true;
-        video.play().catch(()=>{});
-      }
+          v3 = createVideo(STAGE3_VIDEO);
+          v3.muted = true;
+          overlay.appendChild(v3);
+          v3.play().catch(()=>{});
 
-      function finishCinematic(overlay, bgVideo, videoBg, blackout){
-        if (!isCinematic) return;
-        isCinematic = false;
-        try { if (window.__alienAudio) window.__alienAudio.pause(); } catch {}
-        window.__travelAudio = null;
-        window.__blenderAudio = null;
-        window.__alienAudio = null;
+          overlay.appendChild(alienAudio);
 
-        overlay.classList.remove('active');
-        overlay.innerHTML = '';
+          // fade from black
+          if(blackout){
+            blackout.classList.remove('visible');
+            setTimeout(()=> blackout.classList.remove('show'), 900);
+          }
 
-        // Restore background video
-        if (videoBg) videoBg.style.opacity = '1';
-        if (bgVideo) { try{ bgVideo.play(); }catch{} }
+          // fade in alien audio
+          alienAudio.volume = 0;
+          alienAudio.currentTime = 0;
+          alienAudio.play().catch(()=>{});
+          const fadeInStart = performance.now();
+          (function fadeIn(){
+            const p = Math.min(1, (performance.now() - fadeInStart)/ALIEN_FADE_MS);
+            alienAudio.volume = globalVolume * p;
+            if(p < 1) requestAnimationFrame(fadeIn);
+          })();
 
-        // Fade from black back to page
-        fadeFromBlack(blackout, 800);
+          // After ALIEN_PLAY_MS, fade out and finish
+          setTimeout(()=>{
+            const fadeOutStart = performance.now();
+            const startVol = alienAudio.volume;
+            (function fadeOut(){
+              const p = Math.min(1, (performance.now() - fadeOutStart)/ALIEN_FADE_MS);
+              alienAudio.volume = startVol * (1-p);
+              if(p < 1) requestAnimationFrame(fadeOut);
+              else{
+                try{ alienAudio.pause(); }catch{}
+                endToMain(overlay, bgVideo, videoBg);
+              }
+            })();
+          }, ALIEN_PLAY_MS);
+        }
 
-        // Resume main music at current volume
-        if (window.mainMusic){
-          window.mainMusic.volume = window.globalVolume || 0.25;
-          window.mainMusic.play().catch(()=>{});
+        function endToMain(overlay, bgVideo, videoBg){
+          const blackout = qs('#blackout');
+          if(blackout){
+            blackout.classList.add('show');
+            requestAnimationFrame(()=> blackout.classList.add('visible'));
+          }
+
+          setTimeout(()=>{
+            // Clean up overlay and audios
+            try{ travelAudio.pause(); }catch{}
+            try{ blenderAudio.pause(); }catch{}
+            try{ alienAudio.pause(); }catch{}
+
+            unregisterAudio(travelAudio);
+            unregisterAudio(blenderAudio);
+            unregisterAudio(alienAudio);
+
+            overlay.classList.remove('active');
+            overlay.innerHTML = '';
+
+            if(videoBg) videoBg.style.opacity = '1';
+            if(bgVideo){
+              try{ bgVideo.play(); }catch{}
+            }
+
+            if(blackout){
+              blackout.classList.remove('visible');
+              setTimeout(()=> blackout.classList.remove('show'), BLACK_HOLD_SEC*1000);
+            }
+
+            // Resume main music respecting current volume
+            if(mainMusic){
+              mainMusic.volume = globalVolume;
+              mainMusic.play().catch(()=>{});
+            }
+
+            isCinematic = false;
+          }, BLACK_HOLD_SEC*1000);
         }
       }
+    })();
   </script>
 </body>
 </html>
