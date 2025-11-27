@@ -863,6 +863,8 @@
       const ALIEN_PLAY_MS = 60000; // 60s of Alien-Beach audio
       const ALIEN_FADE_MS = 1500;  // fade in/out
 
+      const BLENDER_LEAD_SEC = 3.0;      // start Blender 3s into the file
+
       hiddenBtn.addEventListener('click', () => {
         if (!isCinematic) startCinematic();
       });
@@ -945,6 +947,12 @@
               startStage2(overlay, v1, travelAudio, blenderAudio, alienAudio);
             }
           });
+        v1.addEventListener('ended', () => {
+            fadeToBlack(3, () => {
+              startStage3(overlay, v1, blenderAudio, alienAudio, travelAudio);
+              setTimeout(clearBlack, 600);
+            });
+          });
         });
 
         v1.addEventListener('error', () => {
@@ -953,6 +961,7 @@
         });
 
         // ----- Stage 2: Screensaver-4 + Blender -----
+
         // ----- Stage 2: Screensaver-4 + Blender -----
         function startStage2(overlay, v1, travelAudio, blenderAudio, alienAudio) {
           if (stage2Started) return;
@@ -971,13 +980,29 @@
             if (v1 && v1.parentNode) { v1.parentNode.removeChild(v1); }
           }, VIDEO_CROSSFADE_SEC * 1000 + 80);
 
-          // Audio crossfade Travel -> Blender
+          // Audio crossfade Travel -> Blender (with lead-in offset)
           const startTime = performance.now();
           const startTravelVol = travelAudio.volume;
 
           blenderAudio.volume = 0;
-          blenderAudio.currentTime = 0;
-          safePlayAudio(blenderAudio);
+
+          const startBlender = () => {
+            try {
+              // jump a few seconds into the file so the big warp sound lines up
+              blenderAudio.currentTime = BLENDER_LEAD_SEC;
+            } catch { }
+            safePlayAudio(blenderAudio);
+          };
+
+          // If metadata is already loaded, start immediately; otherwise wait for it
+          if (blenderAudio.readyState >= 1) {
+            startBlender();
+          } else {
+            blenderAudio.addEventListener('loadedmetadata', function onMeta() {
+              blenderAudio.removeEventListener('loadedmetadata', onMeta);
+              startBlender();
+            });
+          }
 
           (function audioStep() {
             const p = Math.min(1, (performance.now() - startTime) / 1200);
@@ -1001,6 +1026,10 @@
             });
           });
 
+        v2.addEventListener('error', () => {
+          // If S4 fails, move straight to Stage 3 (S5) without special fade
+          startStage3(overlay, v2, blenderAudio, alienAudio, travelAudio);
+        });
           v2.addEventListener('error', () => {
             // If S4 fails, move straight to Stage 3 (S5) without special fade
             startStage3(overlay, v2, blenderAudio, alienAudio, travelAudio);
