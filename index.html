@@ -110,8 +110,17 @@
     .video-background video::-webkit-media-controls-enclosure{display:none !important}
     .retro-overlay{position:fixed;inset:0;z-index:1;pointer-events:none;background-image:linear-gradient(transparent 60%, rgba(0,0,0,0.12) 100%), radial-gradient(circle at 50% 10%, rgba(255,255,255,0.03), transparent 20%);mix-blend-mode:overlay}
 
-    /* Blackout overlay for fade-to-black */
-    #blackout{position:fixed;inset:0;background:#000;z-index:9000;opacity:0;pointer-events:none;transition:opacity .8s ease;display:none}
+    /* Blackout overlay for final fade-to-black */
+    #blackout{
+      position:fixed;
+      inset:0;
+      background:#000;
+      z-index:9000;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .8s ease;
+      display:none;
+    }
     #blackout.show{display:block}
     #blackout.visible{opacity:1}
 
@@ -166,16 +175,65 @@
     }
 
     /* Hidden celebrate button */
-    #hiddenCelebrate{position:fixed;bottom:20px;right:20px;width:60px;height:60px;background:transparent;border:none;cursor:pointer;z-index:9999;opacity:0}
+    #hiddenCelebrate{
+      position:fixed;
+      bottom:20px;
+      right:20px;
+      width:60px;
+      height:60px;
+      background:transparent;
+      border:none;
+      cursor:pointer;
+      z-index:9999;
+      opacity:0;
+    }
     #hiddenCelebrate:hover{opacity:0.1}
 
-    /* Warp speed overlay */
-    .warp-overlay{position:fixed;inset:0;z-index:10000;pointer-events:none;display:none;overflow:hidden;background:#000}
-    .warp-overlay.active{display:block}
+    /* Warp overlay */
+    .warp-overlay{
+      position:fixed;
+      inset:0;
+      z-index:10000;
+      pointer-events:none;
+      display:none;
+      overflow:hidden;
+      background:#000;
+    }
+    .warp-overlay.active{
+      display:block;
+    }
+    .warp-overlay video.warp-player{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:cover;
+    }
 
     /* cursor trail */
-    .cursor-core{position:fixed;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle, var(--accent-cyan), var(--accent-magenta));pointer-events:none;z-index:9999;mix-blend-mode:screen;transform:translate(-50%,-50%);opacity:.95;transition:transform .06s linear;box-shadow:0 0 20px var(--accent-cyan), 0 0 40px var(--accent-magenta);display:none}
-    .cursor-trail-dot{position:fixed;border-radius:50%;pointer-events:none;z-index:9998;mix-blend-mode:screen;transition:transform .08s linear,opacity .2s linear}
+    .cursor-core{
+      position:fixed;
+      width:16px;
+      height:16px;
+      border-radius:50%;
+      background:radial-gradient(circle, var(--accent-cyan), var(--accent-magenta));
+      pointer-events:none;
+      z-index:9999;
+      mix-blend-mode:screen;
+      transform:translate(-50%,-50%);
+      opacity:.95;
+      transition:transform .06s linear;
+      box-shadow:0 0 20px var(--accent-cyan), 0 0 40px var(--accent-magenta);
+      display:none;
+    }
+    .cursor-trail-dot{
+      position:fixed;
+      border-radius:50%;
+      pointer-events:none;
+      z-index:9998;
+      mix-blend-mode:screen;
+      transition:transform .08s linear,opacity .2s linear;
+    }
 
     @media(max-width:520px){
       main.container{padding:2rem 1rem}
@@ -187,7 +245,7 @@
   <!-- Main background music -->
   <audio id="main-music" src="Back-to-the-Future-(End Credits).mp3" loop></audio>
 
-  <!-- Video + overlay -->
+  <!-- Background video -->
   <div class="video-background" aria-hidden="true" id="videoBg">
     <video autoplay muted loop id="bg-video" preload="auto" disablePictureInPicture poster="">
       <source src="background-final.mp4" type="video/mp4">
@@ -342,14 +400,14 @@
   <!-- Hidden celebrate button -->
   <button id="hiddenCelebrate" aria-label="Secret celebration"></button>
 
-  <!-- cursor elements -->
+  <!-- cursor core -->
   <div id="cursorCore" class="cursor-core" aria-hidden="true"></div>
 
   <script>
-    // ===== Shared helpers & global audio registry =====
+    // ===== Helpers & shared audio state =====
     const qs = sel => document.querySelector(sel);
 
-    let globalVolume = 0.25; // 25% start
+    let globalVolume = 0.25; // start at 25%
     const audioSet = new Set();
 
     function registerAudio(a){
@@ -380,11 +438,12 @@
       });
     }
 
-    // ===== Main music autoplay =====
+    // ===== Main background music (BTTF) =====
     const mainMusic = document.getElementById('main-music');
     if (mainMusic){
       mainMusic.loop = true;
       registerAudio(mainMusic);
+      window.mainMusic = mainMusic; // expose globally
 
       function tryPlayMainMusic(){
         safePlayAudio(mainMusic);
@@ -392,7 +451,7 @@
       document.addEventListener('DOMContentLoaded', tryPlayMainMusic);
     }
 
-    // ===== Panels (buttons 1–5) =====
+    // ===== Panels (1–5) =====
     document.addEventListener('DOMContentLoaded', () => {
       const panels = Array.from(document.querySelectorAll('.panel'));
 
@@ -517,7 +576,7 @@
       });
     })();
 
-    // ===== Volume slider wiring =====
+    // ===== Volume slider =====
     (function volumeInit(){
       const slider = document.getElementById('volumeSlider');
       if(!slider) return;
@@ -527,291 +586,287 @@
         applyVolume();
       });
 
-      // Apply initial 25%
-      applyVolume();
+      applyVolume(); // initial 25%
     })();
 
-    // ===== Hidden button cinematic (Screensaver-1, -4, -5) =====
-// ===== Hidden button cinematic (Screensaver-1, -4, -5) =====
-(function cinematicInit(){
-  const hiddenBtn = document.getElementById('hiddenCelebrate');
-  if (!hiddenBtn) return;
-
-  let isCinematic = false;
-
-  const STAGE1_VIDEO = 'Screensaver-1.mp4';
-  const STAGE2_VIDEO = 'Screensaver-4.mp4';
-  const STAGE3_VIDEO = 'Screensaver-5.mp4';
-
-  const AUDIO_TRAVEL  = 'Travel-through-space.mp3';
-  const AUDIO_BLENDER = 'Blender-Hyperspace-Jump.mp3';
-  const AUDIO_ALIEN   = 'Alien-Beach-Waves.mp3';
-
-  const VIDEO_CROSSFADE_SEC = 2;     // overlap / visual blend
-  const BLACK_HOLD_SEC       = 3;     // black screen duration
-  const ALIEN_PLAY_MS        = 60000; // 60 seconds Alien audio
-  const ALIEN_FADE_MS        = 1500;  // fade in/out
-
-  hiddenBtn.addEventListener('click', () => {
-    if (!isCinematic) startCinematic();
-  });
-
-  function fadeToBlack(sec, cb){
-    const blackout = qs('#blackout');
-    if (!blackout){
-      cb && cb();
-      return;
-    }
-    blackout.classList.add('show');
-    requestAnimationFrame(() => blackout.classList.add('visible'));
-    setTimeout(() => {
-      cb && cb();
-    }, sec * 1000);
-  }
-
-  function clearBlack(){
-    const blackout = qs('#blackout');
-    if (!blackout) return;
-    blackout.classList.remove('visible');
-    setTimeout(() => blackout.classList.remove('show'), 800);
-  }
-
-  function createVideo(src){
-    const vid = document.createElement('video');
-    vid.src = src;
-    vid.className = 'warp-player';
-    vid.autoplay = true;
-    vid.muted = true;         // stays muted (you wanted S5 muted as well)
-    vid.loop = false;
-    vid.preload = 'auto';
-    vid.style.position = 'absolute';
-    vid.style.inset = '0';
-    vid.style.width = '100%';
-    vid.style.height = '100%';
-    vid.style.objectFit = 'cover';
-    vid.style.opacity = '0';
-    vid.style.transition = `opacity ${VIDEO_CROSSFADE_SEC}s linear`;
-    vid.setAttribute('disablePictureInPicture', 'true');
-    vid.setAttribute('controlslist', 'nodownload nofullscreen noremoteplayback');
-    return vid;
-  }
-
-  function startCinematic(){
-    isCinematic = true;
-
-    const overlay = qs('#warpOverlay');
-    const bgVideo = qs('#bg-video');
-    const videoBg = qs('#videoBg');
-    if (!overlay) return;
-
-    overlay.classList.add('active');
-    overlay.style.background = '#000';
-    overlay.innerHTML = '';
-
-    if (videoBg) videoBg.style.opacity = '0';
-    if (bgVideo){ try { bgVideo.pause(); } catch {} }
-
-    // Pause main BTTF music
-    if (window.mainMusic){
-      try { window.mainMusic.pause(); } catch {}
-    }
-
-    // Create cinematic audios
-    const travelAudio  = new Audio(AUDIO_TRAVEL);
-    travelAudio.loop   = true;
-    registerAudio(travelAudio);
-
-    const blenderAudio = new Audio(AUDIO_BLENDER);
-    blenderAudio.loop  = false;
-    registerAudio(blenderAudio);
-
-    const alienAudio   = new Audio(AUDIO_ALIEN);
-    alienAudio.loop    = false;
-    registerAudio(alienAudio);
-
-    applyVolume();
-
-    let v1, v2, v3;
-    let stage2Started = false;
-    let stage3Started = false;
-
-    // ---------- Stage 1: Screensaver-1 + Travel ----------
-    v1 = createVideo(STAGE1_VIDEO);
-    overlay.appendChild(v1);
-
-    travelAudio.currentTime = 0;
-    safePlayAudio(travelAudio);
-
-    v1.play().catch(()=>{});
-    v1.addEventListener('loadeddata', () => {
-      requestAnimationFrame(() => { v1.style.opacity = '1'; });
-    });
-
-    v1.addEventListener('loadedmetadata', () => {
-      const dur = v1.duration || 0;
-      const crossAt = Math.max(0, dur - VIDEO_CROSSFADE_SEC - 0.3);
-
-      v1.addEventListener('timeupdate', function onTime(){
-        if (stage2Started) return;
-        if (v1.currentTime >= crossAt){
-          v1.removeEventListener('timeupdate', onTime);
-          startStage2();
-        }
-      });
-    });
-
-    v1.addEventListener('error', () => {
-      // If S1 fails, skip straight to S4
-      startStage2();
-    });
-
-    // ---------- Stage 2: Screensaver-4 + Blender ----------
-    function startStage2(){
-      if (stage2Started) return;
-      stage2Started = true;
-
-      v2 = createVideo(STAGE2_VIDEO);
-      overlay.appendChild(v2);
-      v2.play().catch(()=>{});
-
-      // visual crossfade 1 → 4
-      requestAnimationFrame(() => {
-        v2.style.opacity = '1';
-        if (v1) v1.style.opacity = '0';
-      });
+    // ===== Final fade-to-black helper =====
+    function fadeToBlack(sec, cb){
+      const blackout = qs('#blackout');
+      if (!blackout){
+        cb && cb();
+        return;
+      }
+      blackout.classList.add('show');
+      requestAnimationFrame(() => blackout.classList.add('visible'));
       setTimeout(() => {
-        if (v1){ v1.remove(); v1 = null; }
-      }, VIDEO_CROSSFADE_SEC * 1000 + 80);
+        cb && cb();
+      }, sec * 1000);
+    }
 
-      // Travel → Blender audio crossfade
-      const startTime      = performance.now();
-      const startTravelVol = travelAudio.volume;
+    function clearBlack(){
+      const blackout = qs('#blackout');
+      if (!blackout) return;
+      blackout.classList.remove('visible');
+      setTimeout(() => blackout.classList.remove('show'), 800);
+    }
 
-      blenderAudio.volume = 0;
-      blenderAudio.currentTime = 0;
-      safePlayAudio(blenderAudio);
+    // ===== Hidden button cinematic: S1 → S4 → S5 =====
+    (function cinematicInit(){
+      const hiddenBtn = document.getElementById('hiddenCelebrate');
+      if (!hiddenBtn) return;
 
-      (function audioStep(){
-        const p = Math.min(1, (performance.now() - startTime) / 1200);
-        try {
-          travelAudio.volume  = startTravelVol * (1 - p);
-          blenderAudio.volume = globalVolume * p;
-        } catch {}
-        if (p < 1) requestAnimationFrame(audioStep);
-        else {
-          try { travelAudio.pause(); } catch {}
-        }
-      })();
+      let isCinematic = false;
 
-      let stage2Done = false;
+      const STAGE1_VIDEO = 'Screensaver-1.mp4';
+      const STAGE2_VIDEO = 'Screensaver-4.mp4';
+      const STAGE3_VIDEO = 'Screensaver-5.mp4';
 
-      function finishStage2(){
-        if (stage2Done) return;
-        stage2Done = true;
+      const AUDIO_TRAVEL  = 'Travel-through-space.mp3';
+      const AUDIO_BLENDER = 'Blender-Hyperspace-Jump.mp3';
+      const AUDIO_ALIEN   = 'Alien-Beach-Waves.mp3';
 
-        try { blenderAudio.pause(); } catch {}
-        try { travelAudio.pause(); } catch {}
+      const VIDEO_CROSSFADE_SEC = 2;     // overlap between videos
+      const FINAL_BLACK_SEC     = 3;     // fade-to-black at very end
+      const ALIEN_PLAY_MS       = 60000; // 60s of Alien-Beach audio
+      const ALIEN_FADE_MS       = 1500;  // fade in/out
 
-        // Fade to black, then Stage 3
-        fadeToBlack(BLACK_HOLD_SEC, () => {
-          overlay.innerHTML = '';
-          startStage3(overlay, alienAudio, travelAudio, blenderAudio);
-        });
+      hiddenBtn.addEventListener('click', () => {
+        if (!isCinematic) startCinematic();
+      });
+
+      function createVideo(src){
+        const vid = document.createElement('video');
+        vid.src = src;
+        vid.className = 'warp-player';
+        vid.autoplay = true;
+        vid.muted = true; // All cinematic video is muted (audio handled separately)
+        vid.loop = false;
+        vid.preload = 'auto';
+        vid.style.opacity = '0';
+        vid.style.transition = `opacity ${VIDEO_CROSSFADE_SEC}s linear`;
+        vid.setAttribute('disablePictureInPicture', 'true');
+        vid.setAttribute('controlslist', 'nodownload nofullscreen noremoteplayback');
+        return vid;
       }
 
-      // When S4 ends → Stage 3
-      v2.addEventListener('ended', finishStage2, { once:true });
+      function startCinematic(){
+        isCinematic = true;
 
-      // Safety: if ended never fires, force Stage 3 after 2 mins
-      setTimeout(finishStage2, 2 * 60 * 1000);
-    }
+        const overlay = qs('#warpOverlay');
+        const bgVideo = qs('#bg-video');
+        const videoBg = qs('#videoBg');
 
-    // ---------- Stage 3: Screensaver-5 + Alien Beach Waves ----------
-    function startStage3(overlay, alienAudio, travelAudio, blenderAudio){
-      if (stage3Started) return;
-      stage3Started = true;
+        if (!overlay) return;
 
-      overlay.classList.add('active');
+        overlay.classList.add('active');
+        overlay.style.background = '#000';
+        overlay.innerHTML = '';
 
-      v3 = createVideo(STAGE3_VIDEO);
-      v3.style.transition = 'opacity 0.8s linear';
-      overlay.appendChild(v3);
-
-      v3.play().catch(()=>{});
-      v3.addEventListener('loadeddata', () => {
-        requestAnimationFrame(() => { v3.style.opacity = '1'; });
-      });
-
-      // Remove black overlay so S5 is visible
-      clearBlack();
-
-      // Just in case – ensure earlier audio is off
-      try { travelAudio.pause(); } catch {}
-      try { blenderAudio.pause(); } catch {}
-
-      // Alien audio fade-in
-      alienAudio.volume = 0;
-      alienAudio.currentTime = 0;
-      safePlayAudio(alienAudio);
-
-      const fadeInStart = performance.now();
-      (function fadeIn(){
-        const p = Math.min(1, (performance.now() - fadeInStart) / ALIEN_FADE_MS);
-        alienAudio.volume = globalVolume * p;
-        if (p < 1) requestAnimationFrame(fadeIn);
-      })();
-
-      // After 60s, fade out Alien & return to main page
-      setTimeout(() => {
-        const fadeOutStart = performance.now();
-        const startVol = alienAudio.volume;
-
-        (function fadeOut(){
-          const p = Math.min(1, (performance.now() - fadeOutStart) / ALIEN_FADE_MS);
-          alienAudio.volume = startVol * (1 - p);
-          if (p < 1) requestAnimationFrame(fadeOut);
-          else {
-            try { alienAudio.pause(); } catch {}
-            endToMain(travelAudio, blenderAudio, alienAudio);
-          }
-        })();
-      }, ALIEN_PLAY_MS);
-    }
-
-    // ---------- Return to main page ----------
-    function endToMain(travelAudio, blenderAudio, alienAudio){
-      const overlay = qs('#warpOverlay');
-      const videoBg = qs('#videoBg');
-      const bgVideo = qs('#bg-video');
-
-      fadeToBlack(BLACK_HOLD_SEC, () => {
-        if (overlay){
-          overlay.classList.remove('active');
-          overlay.innerHTML = '';
-        }
-
-        unregisterAudio(travelAudio);
-        unregisterAudio(blenderAudio);
-        unregisterAudio(alienAudio);
-
-        if (videoBg) videoBg.style.opacity = '1';
+        if (videoBg) videoBg.style.opacity = '0';
         if (bgVideo){
-          try { bgVideo.play(); } catch {}
+          try { bgVideo.pause(); } catch {}
         }
 
-        clearBlack();
-
-        // Resume BTTF main music
         if (window.mainMusic){
-          window.mainMusic.volume = globalVolume;
-          safePlayAudio(window.mainMusic);
+          try { window.mainMusic.pause(); } catch {}
         }
 
-        isCinematic = false;
-      });
-    }
-  }
-})();
+        const travelAudio  = new Audio(AUDIO_TRAVEL);
+        travelAudio.loop   = true;
+        registerAudio(travelAudio);
+
+        const blenderAudio = new Audio(AUDIO_BLENDER);
+        blenderAudio.loop  = false;
+        registerAudio(blenderAudio);
+
+        const alienAudio   = new Audio(AUDIO_ALIEN);
+        alienAudio.loop    = false;
+        registerAudio(alienAudio);
+
+        applyVolume();
+
+        let v1, v2, v3;
+        let stage2Started = false;
+        let stage3Started = false;
+
+        // ----- Stage 1: Screensaver-1 + Travel-through-space -----
+        v1 = createVideo(STAGE1_VIDEO);
+        overlay.appendChild(v1);
+
+        travelAudio.currentTime = 0;
+        safePlayAudio(travelAudio);
+
+        v1.play().catch(()=>{});
+        v1.addEventListener('loadeddata', () => {
+          requestAnimationFrame(() => { v1.style.opacity = '1'; });
+        });
+
+        v1.addEventListener('loadedmetadata', () => {
+          const dur = v1.duration || 0;
+          const crossAt = Math.max(1, dur - VIDEO_CROSSFADE_SEC - 0.5);
+
+          v1.addEventListener('timeupdate', function onTime(){
+            if (stage2Started) return;
+            if (v1.currentTime >= crossAt){
+              v1.removeEventListener('timeupdate', onTime);
+              startStage2(overlay, v1, travelAudio, blenderAudio, alienAudio);
+            }
+          });
+        });
+
+        v1.addEventListener('error', () => {
+          // If S1 fails, skip straight to S4
+          startStage2(overlay, v1, travelAudio, blenderAudio, alienAudio);
+        });
+
+        // ----- Stage 2: Screensaver-4 + Blender -----
+        function startStage2(overlay, v1, travelAudio, blenderAudio){
+          if (stage2Started) return;
+          stage2Started = true;
+
+          v2 = createVideo(STAGE2_VIDEO);
+          overlay.appendChild(v2);
+          v2.play().catch(()=>{});
+
+          // Visual crossfade 1 -> 4
+          requestAnimationFrame(() => {
+            v2.style.opacity = '1';
+            if (v1) v1.style.opacity = '0';
+          });
+          setTimeout(() => {
+            if (v1 && v1.parentNode){ v1.parentNode.removeChild(v1); }
+          }, VIDEO_CROSSFADE_SEC * 1000 + 80);
+
+          // Audio crossfade Travel -> Blender
+          const startTime      = performance.now();
+          const startTravelVol = travelAudio.volume;
+
+          blenderAudio.volume = 0;
+          blenderAudio.currentTime = 0;
+          safePlayAudio(blenderAudio);
+
+          (function audioStep(){
+            const p = Math.min(1, (performance.now() - startTime) / 1200);
+            try {
+              travelAudio.volume  = startTravelVol * (1 - p);
+              blenderAudio.volume = globalVolume * p;
+            } catch {}
+            if (p < 1) requestAnimationFrame(audioStep);
+            else {
+              try { travelAudio.pause(); } catch {}
+            }
+          })();
+
+          v2.addEventListener('loadedmetadata', () => {
+            const dur2 = v2.duration || 0;
+            const crossAt2 = Math.max(1, dur2 - VIDEO_CROSSFADE_SEC - 0.5);
+
+            v2.addEventListener('timeupdate', function onTime2(){
+              if (stage3Started) return;
+              if (v2.currentTime >= crossAt2){
+                v2.removeEventListener('timeupdate', onTime2);
+                startStage3(overlay, v2, blenderAudio, alienAudio, travelAudio);
+              }
+            });
+          });
+
+          v2.addEventListener('error', () => {
+            // If S4 fails, move straight to Stage 3 (S5)
+            startStage3(overlay, v2, blenderAudio, alienAudio, travelAudio);
+          });
+        }
+
+        // ----- Stage 3: Screensaver-5 + Alien Beach Waves -----
+        function startStage3(overlay, v2, blenderAudio, alienAudio, travelAudio){
+          if (stage3Started) return;
+          stage3Started = true;
+
+          v3 = createVideo(STAGE3_VIDEO);
+          overlay.appendChild(v3);
+          v3.play().catch(()=>{});
+          v3.addEventListener('loadeddata', () => {
+            requestAnimationFrame(() => {
+              v3.style.opacity = '1';
+              if (v2) v2.style.opacity = '0';
+            });
+          });
+
+          setTimeout(() => {
+            if (v2 && v2.parentNode){ v2.parentNode.removeChild(v2); }
+          }, VIDEO_CROSSFADE_SEC * 1000 + 80);
+
+          // Make sure earlier audio is quiet
+          try { travelAudio.pause(); } catch {}
+          // Blender will fade out while Alien fades in
+          const fadeStart = performance.now();
+          const startBlenderVol = blenderAudio.volume;
+
+          alienAudio.volume = 0;
+          alienAudio.currentTime = 0;
+          safePlayAudio(alienAudio);
+
+          (function audioXFade(){
+            const p = Math.min(1, (performance.now() - fadeStart) / ALIEN_FADE_MS);
+            try {
+              blenderAudio.volume = startBlenderVol * (1 - p);
+              alienAudio.volume   = globalVolume * p;
+            } catch {}
+            if (p < 1) requestAnimationFrame(audioXFade);
+            else {
+              try { blenderAudio.pause(); } catch {}
+            }
+          })();
+
+          // After 60s, fade out Alien & return to main page
+          setTimeout(() => {
+            const fadeOutStart = performance.now();
+            const startAlienVol = alienAudio.volume;
+
+            (function fadeOut(){
+              const p = Math.min(1, (performance.now() - fadeOutStart) / ALIEN_FADE_MS);
+              try {
+                alienAudio.volume = startAlienVol * (1 - p);
+              } catch {}
+              if (p < 1) requestAnimationFrame(fadeOut);
+              else {
+                try { alienAudio.pause(); } catch {}
+                endToMain(overlay, travelAudio, blenderAudio, alienAudio);
+              }
+            })();
+          }, ALIEN_PLAY_MS);
+        }
+
+        // ----- End: fade to black and return to main page -----
+        function endToMain(overlay, travelAudio, blenderAudio, alienAudio){
+          fadeToBlack(FINAL_BLACK_SEC, () => {
+            if (overlay){
+              overlay.classList.remove('active');
+              overlay.innerHTML = '';
+            }
+
+            unregisterAudio(travelAudio);
+            unregisterAudio(blenderAudio);
+            unregisterAudio(alienAudio);
+
+            const videoBg = qs('#videoBg');
+            const bgVideo = qs('#bg-video');
+            if (videoBg) videoBg.style.opacity = '1';
+            if (bgVideo){
+              try { bgVideo.play(); } catch {}
+            }
+
+            clearBlack();
+
+            if (window.mainMusic){
+              window.mainMusic.volume = globalVolume;
+              safePlayAudio(window.mainMusic);
+            }
+
+            isCinematic = false;
+          });
+        }
+      }
+    })();
   </script>
 </body>
 </html>
