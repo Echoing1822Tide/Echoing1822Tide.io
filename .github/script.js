@@ -1,210 +1,241 @@
-/* =========================================================
-   Career Lifeline Scrolly + Background + Audio
-   ========================================================= */
+(() => {
+  // ----------------------------
+  // CONFIG — background sequence
+  // ----------------------------
+  const BACKGROUND_IMAGES = [
+    "./AirForce_Emblem.png",
+    "./CADdets_Retro.png",
+    "./CADdets_1.png",
+    "./Tech_Career.png"
+  ];
 
-/* ---------- Background crossfade intro (images, not video) ---------- */
-const bgImgs = Array.from(document.querySelectorAll(".bg-img"));
-const flash = document.getElementById("bgFlash");
+  // Each image stays on screen this long before switching.
+  const HOLD_MS = 1600;
 
-function flashWhite() {
-  flash.classList.add("on");
-  setTimeout(() => flash.classList.remove("on"), 180);
-}
+  // Crossfade duration matches CSS transition (~900ms)
+  const FADE_MS = 900;
 
-function showBg(index) {
-  bgImgs.forEach((img, i) => img.classList.toggle("is-visible", i === index));
-}
+  // White flash between images (like your “fade to white” request)
+  const FLASH_MS = 180;
 
-function runBackgroundIntro() {
-  // Sequence: AF -> CAD1 -> CAD2 -> AF -> CAD1 -> CAD2 -> TECH (sticks)
-  const sequence = [0, 1, 2, 0, 1, 2, 3];
+  // ----------------------------
+  // ELEMENTS
+  // ----------------------------
+  const bgA = document.getElementById("bgA");
+  const bgB = document.getElementById("bgB");
+  const bgFlash = document.getElementById("bgFlash");
 
-  let i = 0;
-  const intervalMs = 1200;
+  const themeBtn = document.getElementById("themeBtn");
+  const trailBtn = document.getElementById("trailBtn");
+  const trail = document.getElementById("trail");
 
-  const timer = setInterval(() => {
-    i++;
-    if (i >= sequence.length) {
-      clearInterval(timer);
-      // final background remains static (index 3)
-      showBg(sequence[sequence.length - 1]);
-      return;
-    }
-    flashWhite();
-    showBg(sequence[i]);
-  }, intervalMs);
-}
+  const audio = document.getElementById("bgAudio");
+  const playBtn = document.getElementById("playBtn");
+  const volRange = document.getElementById("volRange");
 
-/* ---------- Scroll-driven cards (Luma-like pinned stage) ---------- */
-const cards = Array.from(document.querySelectorAll(".card"));
-const steps = Array.from(document.querySelectorAll(".step"));
+  const card = document.getElementById("card");
+  const steps = Array.from(document.querySelectorAll(".step"));
 
-function setActiveCard(index) {
-  cards.forEach((card, i) => card.classList.toggle("active", i === index));
-}
+  // ----------------------------
+  // HELPERS
+  // ----------------------------
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-// IntersectionObserver is the clean way to swap content based on what is visible.
-// (This is the core technique behind “scrollytelling” sections.) 
-const io = new IntersectionObserver(
-  (entries) => {
-    // choose the most visible entry
-    const visible = entries
-      .filter(e => e.isIntersecting)
-      .sort((a, b) => (b.intersectionRatio - a.intersectionRatio))[0];
-
-    if (!visible) return;
-
-    const index = Number(visible.target.dataset.step);
-    if (!Number.isNaN(index)) setActiveCard(index);
-  },
-  { threshold: [0.35, 0.55, 0.75] }
-);
-
-steps.forEach(step => io.observe(step));
-
-/* ---------- Expand/collapse “bubble” details ---------- */
-function setExpanded(btn, card, expanded) {
-  btn.setAttribute("aria-expanded", String(expanded));
-  const details = card.querySelector(".details");
-  if (!details) return;
-
-  if (expanded) {
-    details.hidden = false;
-    card.classList.add("open");
-  } else {
-    details.hidden = true;
-    card.classList.remove("open");
+  function setBg(el, url){
+    el.style.backgroundImage = `url("${url}")`;
   }
-}
 
-cards.forEach((card) => {
-  const btn = card.querySelector(".expand");
-  const details = card.querySelector(".details");
-  if (!btn || !details) return;
+  async function preloadImages(urls){
+    await Promise.all(urls.map(url => new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = url;
+    })));
+  }
 
-  setExpanded(btn, card, false);
+  async function flashWhite(){
+    bgFlash.style.opacity = "0.90";
+    await sleep(FLASH_MS);
+    bgFlash.style.opacity = "0";
+  }
 
-  btn.addEventListener("click", () => {
-    const expanded = btn.getAttribute("aria-expanded") === "true";
-    setExpanded(btn, card, !expanded);
+  // ----------------------------
+  // BACKGROUND SEQUENCE
+  // ----------------------------
+  async function runBackgroundSequence(){
+    await preloadImages(BACKGROUND_IMAGES);
+
+    // Initialize
+    setBg(bgA, BACKGROUND_IMAGES[0]);
+    bgA.style.opacity = "1";
+    setBg(bgB, BACKGROUND_IMAGES[0]);
+    bgB.style.opacity = "0";
+
+    let showingA = true;
+
+    for (let i = 1; i < BACKGROUND_IMAGES.length; i++){
+      await sleep(HOLD_MS);
+      await flashWhite();
+
+      const nextUrl = BACKGROUND_IMAGES[i];
+      const incoming = showingA ? bgB : bgA;
+      const outgoing = showingA ? bgA : bgB;
+
+      setBg(incoming, nextUrl);
+      incoming.style.opacity = "1";
+      outgoing.style.opacity = "0";
+
+      await sleep(FADE_MS);
+      showingA = !showingA;
+    }
+
+    // Hold last image forever (no more switching)
+  }
+
+  // ----------------------------
+  // AUDIO CONTROLS
+  // ----------------------------
+  function setVolume(v){
+    const vol = Math.max(0, Math.min(1, Number(v)));
+    audio.volume = vol;
+    volRange.value = String(vol);
+  }
+
+  async function togglePlay(){
+    try{
+      if (audio.paused){
+        await audio.play();              // requires user gesture (button click)
+        playBtn.textContent = "Pause";
+      } else {
+        audio.pause();
+        playBtn.textContent = "Play";
+      }
+    } catch (e){
+      // If the browser blocks it, we still keep the UI sane.
+      playBtn.textContent = "Play";
+      console.warn("Audio play blocked:", e);
+    }
+  }
+
+  // ----------------------------
+  // THEME + TRAIL
+  // ----------------------------
+  function toggleTheme(){
+    const body = document.body;
+    const now = body.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    body.setAttribute("data-theme", now);
+    themeBtn.setAttribute("aria-pressed", now === "light" ? "true" : "false");
+  }
+
+  function toggleTrail(){
+    const on = document.body.classList.toggle("trail-on");
+    trailBtn.setAttribute("aria-pressed", on ? "true" : "false");
+  }
+
+  let trailOn = false;
+  window.addEventListener("pointermove", (e) => {
+    if (!document.body.classList.contains("trail-on")) return;
+    trail.style.transform = `translate3d(${e.clientX - 8}px, ${e.clientY - 8}px, 0)`;
   });
-});
 
-/* ---------- Theme toggle ---------- */
-const themeBtn = document.getElementById("themeBtn");
-themeBtn?.addEventListener("click", () => {
-  document.body.classList.toggle("theme-dark");
-});
+  // ----------------------------
+  // SCROLLYTELLING (Luma-style)
+  // ----------------------------
+  let activeIndex = 0;
 
-/* ---------- Mouse trail toggle ---------- */
-const trailBtn = document.getElementById("trailBtn");
-let trailOn = false;
-let dots = [];
-let mouseMoveHandler = null;
+  function renderStep(i){
+    const step = steps[i];
+    const tpl = step.querySelector("template");
+    if (!tpl) return;
 
-function enableTrail() {
-  trailOn = true;
+    // Replace the card content
+    card.innerHTML = "";
+    card.appendChild(tpl.content.cloneNode(true));
 
-  // make a small chain of dots
-  dots = Array.from({ length: 10 }, () => {
-    const d = document.createElement("div");
-    d.className = "trail-dot";
-    document.body.appendChild(d);
-    return { el: d, x: 0, y: 0 };
-  });
+    // Position presets (spread out)
+    const pos = step.dataset.pos || "center";
+    const map = {
+      left:     { x: -140, y: -40 },
+      right:    { x:  140, y: -20 },
+      center:   { x:    0, y: -30 },
+      leftFar:  { x: -180, y:  40 },
+      rightFar: { x:  180, y:  60 }
+    };
+    const p = map[pos] || map.center;
 
-  let lastX = 0, lastY = 0;
+    card.style.setProperty("--x", `${p.x}px`);
+    card.style.setProperty("--y", `${p.y}px`);
+  }
 
-  mouseMoveHandler = (e) => {
-    lastX = e.clientX;
-    lastY = e.clientY;
-    dots[0].x = lastX;
-    dots[0].y = lastY;
-    dots[0].el.style.opacity = ".9";
-  };
+  function setActive(i){
+    activeIndex = Math.max(0, Math.min(steps.length - 1, i));
+    renderStep(activeIndex);
+  }
 
-  window.addEventListener("mousemove", mouseMoveHandler);
+  // Smooth “expand/shrink” while scrolling through the active step
+  function clamp01(n){ return Math.max(0, Math.min(1, n)); }
+  function easeInOut(t){ return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2)/2; }
 
-  // animate follow
-  function tick() {
-    if (!trailOn) return;
-    for (let i = 1; i < dots.length; i++) {
-      dots[i].x += (dots[i - 1].x - dots[i].x) * 0.25;
-      dots[i].y += (dots[i - 1].y - dots[i].y) * 0.25;
-      dots[i].el.style.left = `${dots[i].x}px`;
-      dots[i].el.style.top = `${dots[i].y}px`;
-      dots[i].el.style.opacity = String(Math.max(0, 0.9 - i * 0.08));
+  function tick(){
+    const step = steps[activeIndex];
+    if (step){
+      const r = step.getBoundingClientRect();
+      const vh = window.innerHeight || 1;
+
+      // progress ~0 when step top hits bottom of viewport, ~1 when step bottom hits top
+      const raw = 1 - (r.bottom / (vh + r.height));
+      const p = clamp01(raw);
+      const e = easeInOut(p);
+
+      const scale = 0.94 + (0.06 * e);
+      const op = 0.82 + (0.18 * e);
+
+      card.style.setProperty("--s", scale.toFixed(3));
+      card.style.setProperty("--o", op.toFixed(3));
     }
     requestAnimationFrame(tick);
   }
-  tick();
-}
 
-function disableTrail() {
-  trailOn = false;
-  if (mouseMoveHandler) window.removeEventListener("mousemove", mouseMoveHandler);
-  dots.forEach(d => d.el.remove());
-  dots = [];
-}
+  function setupIntersection(){
+    const io = new IntersectionObserver((entries) => {
+      // pick the most-visible intersecting step
+      const visible = entries
+        .filter(e => e.isIntersecting)
+        .sort((a,b) => b.intersectionRatio - a.intersectionRatio);
 
-trailBtn?.addEventListener("click", () => {
-  if (!trailOn) enableTrail();
-  else disableTrail();
-});
+      if (visible.length){
+        const idx = steps.indexOf(visible[0].target);
+        if (idx !== -1 && idx !== activeIndex) setActive(idx);
+      }
+    }, {
+      threshold: [0.25, 0.5, 0.75]
+    });
 
-/* ---------- Audio (volume 25%, user gesture to start) ---------- */
-// Browsers often block autoplay until a user interacts with the page. 
-const audio = document.getElementById("bgAudio");
-const volumeSlider = document.getElementById("volumeSlider");
-const audioBtn = document.getElementById("audioBtn");
-
-let audioWanted = false;
-
-function syncVolume(v) {
-  const vol = Math.min(1, Math.max(0, v));
-  audio.volume = vol;
-  if (volumeSlider) volumeSlider.value = String(vol);
-}
-
-async function tryPlay() {
-  try {
-    await audio.play();
-    audioWanted = true;
-    if (audioBtn) audioBtn.textContent = "Pause";
-  } catch (err) {
-    // Autoplay blocked until click/tap
-    audioWanted = false;
-    if (audioBtn) audioBtn.textContent = "Play";
+    steps.forEach(s => io.observe(s));
   }
-}
 
-function pauseAudio() {
-  audio.pause();
-  audioWanted = false;
-  if (audioBtn) audioBtn.textContent = "Play";
-}
+  // ----------------------------
+  // INIT
+  // ----------------------------
+  function init(){
+    // Background
+    runBackgroundSequence();
 
-volumeSlider?.addEventListener("input", (e) => {
-  syncVolume(Number(e.target.value));
-});
+    // Audio defaults
+    setVolume(volRange.value);
 
-audioBtn?.addEventListener("click", async () => {
-  if (audio.paused) await tryPlay();
-  else pauseAudio();
-});
+    // Buttons
+    playBtn.addEventListener("click", togglePlay);
+    volRange.addEventListener("input", (e) => setVolume(e.target.value));
+    themeBtn.addEventListener("click", toggleTheme);
+    trailBtn.addEventListener("click", toggleTrail);
 
-// Start at 25%
-syncVolume(0.25);
+    // Scrollytelling
+    setActive(0);
+    setupIntersection();
+    requestAnimationFrame(tick);
+  }
 
-// First user interaction: attempt to start audio
-window.addEventListener(
-  "pointerdown",
-  async () => {
-    if (audio.paused) await tryPlay();
-  },
-  { once: true }
-);
-
-/* ---------- Kick things off ---------- */
-runBackgroundIntro();
-setActiveCard(0);
+  document.addEventListener("DOMContentLoaded", init);
+})();

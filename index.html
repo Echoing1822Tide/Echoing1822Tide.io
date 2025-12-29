@@ -3,156 +3,141 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Career Lifeline – James Gill</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>Career Lifeline — James Gill</title>
+
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 
-<body class="theme-dark">
-  <!-- Fixed, immobile background layer -->
-  <div id="bg">
-    <div id="bgFlash" aria-hidden="true"></div>
-
-    <!-- Background images (crossfade) -->
-    <img class="bg-img is-visible" src="assets/img/airforce.png" alt="" aria-hidden="true" />
-    <img class="bg-img" src="assets/img/caddets_1.png" alt="" aria-hidden="true" />
-    <img class="bg-img" src="assets/img/caddets_2.png" alt="" aria-hidden="true" />
-    <img class="bg-img" src="assets/img/tech.png" alt="" aria-hidden="true" />
-
-    <!-- subtle dark overlay for readability -->
-    <div class="bg-vignette" aria-hidden="true"></div>
+<body data-theme="dark">
+  <!-- Fixed background layers (crossfades + white flash between images) -->
+  <div id="bg" aria-hidden="true">
+    <div class="bg-layer" id="bgA"></div>
+    <div class="bg-layer" id="bgB"></div>
+    <div id="bgFlash"></div>
   </div>
 
-  <!-- Background music (NOTE: browsers require a user gesture before audio can play) -->
-  <audio id="bgAudio" preload="auto" loop
-    src="I,%20am...me.mp3">
-  </audio>
+  <!-- Mouse trail (optional toggle) -->
+  <div id="trail" aria-hidden="true"></div>
 
-  <header class="hero">
-    <div class="hero-inner">
-      <h1>Career Lifeline – James Gill</h1>
-
-      <!-- Your italic subhead (this belongs in BODY, not inside <head>) -->
+  <header class="topbar">
+    <div class="brand">
+      <h1>Career Lifeline — James Gill</h1>
       <p class="tagline"><em>Empowering tech to serve the mission. From Mission-ops to DevOps.</em></p>
+    </div>
 
-      <div class="controls">
-        <a class="btn primary" href="https://www.linkedin.com" target="_blank" rel="noopener">
-          Connect on LinkedIn
-        </a>
+    <div class="controls">
+      <a class="btn" href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer">Connect on LinkedIn</a>
 
-        <button class="btn" id="themeBtn" type="button">Theme change</button>
-        <button class="btn" id="trailBtn" type="button">Mouse Trail</button>
+      <button class="btn" id="themeBtn" type="button" aria-pressed="false">Theme change</button>
+      <button class="btn" id="trailBtn" type="button" aria-pressed="false">Mouse Trail</button>
 
-        <div class="volume">
-          <label for="volumeSlider">Volume</label>
-          <input id="volumeSlider" type="range" min="0" max="1" step="0.01" value="0.25" title="Adjust volume" />
-        </div>
-
-        <button class="btn" id="audioBtn" type="button">Play</button>
+      <div class="vol">
+        <label for="volRange">Volume</label>
+        <input id="volRange" type="range" min="0" max="1" step="0.01" value="0.25" />
+        <button class="btn" id="playBtn" type="button">Play</button>
       </div>
     </div>
   </header>
 
-  <!-- Scrolly section: sticky stage + invisible scroll "steps" -->
-  <main class="scrolly">
-    <div class="pin">
-      <div class="stage" role="region" aria-label="Career lifeline scrolly cards">
+  <!-- Audio (note: autoplay is usually blocked until user clicks Play) -->
+  <audio id="bgAudio" loop preload="auto">
+    <source src="./I,%20am...me.mp3" type="audio/mpeg" />
+  </audio>
 
-        <!-- Card 1 -->
-        <article class="card active" data-card="0">
-          <div class="card-head">
-            <h2>Job Title</h2>
-            <button class="expand" type="button" aria-expanded="false">Expand</button>
-          </div>
-          <div class="card-body">
-            <p class="preview">Your current/next title goes here.</p>
-            <div class="details" hidden>
-              <p><strong>Example:</strong> Cloud Application Developer (in training), transitioning from USAF Electrical Power Production.</p>
-            </div>
-          </div>
-        </article>
-
-        <!-- Card 2 -->
-        <article class="card" data-card="1">
-          <div class="card-head">
-            <h2>Age</h2>
-            <button class="expand" type="button" aria-expanded="false">Expand</button>
-          </div>
-          <div class="card-body">
-            <p class="preview">Your current age + timeline markers.</p>
-            <div class="details" hidden>
-              <p><strong>Example:</strong> 38 — building toward MSSA completion and first tech role.</p>
-            </div>
-          </div>
-        </article>
-
-        <!-- Card 3 -->
-        <article class="card" data-card="2">
-          <div class="card-head">
-            <h2>Likes</h2>
-            <button class="expand" type="button" aria-expanded="false">Expand</button>
-          </div>
-          <div class="card-body">
-            <p class="preview">What you lean toward (work + life).</p>
-            <div class="details" hidden>
-              <ul>
-                <li>Building reliable systems</li>
-                <li>Clear requirements</li>
-                <li>Learning and iterating</li>
-              </ul>
-            </div>
-          </div>
-        </article>
-
-        <!-- Card 4 -->
-        <article class="card" data-card="3">
-          <div class="card-head">
-            <h2>Dislikes</h2>
-            <button class="expand" type="button" aria-expanded="false">Expand</button>
-          </div>
-          <div class="card-body">
-            <p class="preview">Friction points and non-negotiables.</p>
-            <div class="details" hidden>
-              <ul>
-                <li>Vague scope / moving goalposts</li>
-                <li>Sloppy process in high-risk work</li>
-                <li>Noise-for-no-reason</li>
-              </ul>
-            </div>
-          </div>
-        </article>
-
-        <!-- Card 5 -->
-        <article class="card" data-card="4">
-          <div class="card-head">
-            <h2>Transferable Skills</h2>
-            <button class="expand" type="button" aria-expanded="false">Expand</button>
-          </div>
-          <div class="card-body">
-            <p class="preview">Your “military → tech” bridge.</p>
-            <div class="details" hidden>
-              <ul>
-                <li>Leadership under pressure</li>
-                <li>Risk management / QA mindset</li>
-                <li>Systems thinking</li>
-                <li>Training & facilitation</li>
-              </ul>
-            </div>
-          </div>
-        </article>
-
+  <main>
+    <!-- Hero spacer so first “real” thing is Block 1 as you begin to scroll -->
+    <section id="hero" aria-label="Intro">
+      <div class="hero-inner">
+        <div class="hero-pill">Scroll ↓</div>
       </div>
-    </div>
+    </section>
 
-    <!-- Scroll “steps” (no visible numbers; they just drive which card is active) -->
-    <section class="step" data-step="0" aria-label="Job Title"></section>
-    <section class="step" data-step="1" aria-label="Age"></section>
-    <section class="step" data-step="2" aria-label="Likes"></section>
-    <section class="step" data-step="3" aria-label="Dislikes"></section>
-    <section class="step" data-step="4" aria-label="Transferable Skills"></section>
+    <!-- Scrollytelling area -->
+    <section id="scrolly" aria-label="Career Lifeline Sections">
+      <!-- Sticky stage -->
+      <div id="stage">
+        <article id="card" class="card" role="region" aria-live="polite"></article>
+      </div>
 
-    <footer class="footer">© 2026 EchoingTide1822 - James Gill</footer>
+      <!-- Steps (these drive what appears in the sticky stage) -->
+      <div id="steps">
+        <section class="step" data-pos="left">
+          <template>
+            <h2>Job Title</h2>
+            <p>Your current/next title goes here.</p>
+            <details>
+              <summary>Expand</summary>
+              <div class="details">
+                <p>Add extra context, milestones, or a short “why this matters” line.</p>
+              </div>
+            </details>
+          </template>
+        </section>
+
+        <section class="step" data-pos="right">
+          <template>
+            <h2>Age</h2>
+            <p>Your current age + timeline markers.</p>
+            <details>
+              <summary>Expand</summary>
+              <div class="details">
+                <p>Example: “38 now. Retire Dec 2025. Houston area next.”</p>
+              </div>
+            </details>
+          </template>
+        </section>
+
+        <section class="step" data-pos="center">
+          <template>
+            <h2>Likes</h2>
+            <p>What you lean toward (work + life).</p>
+            <details>
+              <summary>Expand</summary>
+              <div class="details">
+                <p>Examples: customer empathy, clean systems, strong standards, calm teams.</p>
+              </div>
+            </details>
+          </template>
+        </section>
+
+        <section class="step" data-pos="leftFar">
+          <template>
+            <h2>Dislikes</h2>
+            <p>Friction points and non-negotiables.</p>
+            <details>
+              <summary>Expand</summary>
+              <div class="details">
+                <p>Examples: chaos-without-ownership, vague requirements, sloppy quality.</p>
+              </div>
+            </details>
+          </template>
+        </section>
+
+        <section class="step" data-pos="rightFar">
+          <template>
+            <h2>Transferable Skills</h2>
+            <p>Your “military → tech” bridge.</p>
+            <details>
+              <summary>Expand</summary>
+              <div class="details">
+                <ul>
+                  <li>Systems thinking</li>
+                  <li>Risk management</li>
+                  <li>Process improvement</li>
+                  <li>Leadership under pressure</li>
+                </ul>
+              </div>
+            </details>
+          </template>
+        </section>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p>© 2026 EchoingTide1822 - James Gill</p>
+    </footer>
   </main>
 
-  <script src="script.js" defer></script>
+  <script src="./script.js" defer></script>
 </body>
 </html>
