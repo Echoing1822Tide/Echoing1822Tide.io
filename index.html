@@ -4,138 +4,129 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Career Lifeline — James Gill</title>
+
+  <!-- IMPORTANT: use RELATIVE paths for GitHub Pages project sites -->
   <link rel="stylesheet" href="./style.css" />
-  <script src="./app.js" defer></script>
 </head>
 
 <body>
-  <!-- Background layers (fade between images) -->
-  <div id="bg" aria-hidden="true">
-    <div class="bg-layer is-visible" data-bg="0" style="background-image:url('./AirForce_Emblem.png')"></div>
-    <div class="bg-layer" data-bg="1" style="background-image:url('./CADdets_Retro.png')"></div>
-    <div class="bg-layer" data-bg="2" style="background-image:url('./CADdets_1.png')"></div>
-    <div class="bg-layer" data-bg="3" style="background-image:url('./Tech_Career.png')"></div>
-    <div class="bg-vignette"></div>
+  <!-- Fixed background (two layers for smooth crossfade) -->
+  <div class="bg">
+    <div id="bgA" class="bg__layer"></div>
+    <div id="bgB" class="bg__layer bg__layer--hidden"></div>
+    <div class="bg__vignette"></div>
   </div>
 
-  <header class="topbar">
-    <h1>Career Lifeline — James Gill</h1>
-    <p class="tagline">Empowering tech to serve the mission. From Mission-ops to DevOps.</p>
+  <!-- Top header / controls -->
+  <header class="top">
+    <div class="top__inner">
+      <h1 class="title">Career Lifeline — James Gill</h1>
+      <p class="subtitle">Empowering tech to serve the mission. From Mission-ops to DevOps.</p>
 
-    <div class="controls">
-      <a class="btn" href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer">
-        Connect on LinkedIn
-      </a>
+      <div class="controls">
+        <a class="btn btn--primary" href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer">
+          Connect on LinkedIn
+        </a>
 
-      <button class="btn" id="themeToggle" type="button">Theme change</button>
-      <button class="btn" id="trailToggle" type="button">Mouse Trail</button>
+        <button id="themeBtn" class="btn" type="button">Theme change</button>
+        <button id="trailBtn" class="btn" type="button">Mouse Trail</button>
 
-      <div class="audio">
-        <label class="audio-label" for="volume">Volume</label>
-        <input id="volume" type="range" min="0" max="1" step="0.01" value="0.35" />
-        <button class="btn" id="playPause" type="button">Play</button>
+        <div class="vol">
+          <span class="vol__label">Volume</span>
+          <input id="volSlider" class="vol__slider" type="range" min="0" max="1" step="0.01" value="0.35" />
+          <button id="playBtn" class="btn btn--small" type="button">Play</button>
+        </div>
+
+        <div class="hint">Scroll ↓</div>
       </div>
 
-      <!-- “Hidden” button: tiny + low opacity until you hover the header -->
-      <button class="secret" id="secretBtn" type="button" aria-label="Debug toggle">•</button>
+      <div class="footerMark">© 2026 EchoingTide1822 - James Gill</div>
     </div>
-
-    <div class="scrollHint">Scroll ↓</div>
   </header>
 
-  <!-- IMPORTANT: audio src must be a WEB path, not C:\... -->
-  <!-- Your filename has a space; spaces must be URL-encoded as %20 -->
-  <audio id="bgMusic" preload="auto" loop src="./I,%20am...me.mp3"></audio>
+  <!-- Music (browser will require user interaction to start) -->
+  <audio id="bgMusic" preload="auto" loop>
+    <!-- Keep the filename EXACT. Browser will URL-encode spaces automatically. -->
+    <source src="./I, am...me.mp3" type="audio/mpeg" />
+  </audio>
 
-  <main class="scrolly" id="scrolly">
-    <div class="stage">
-      <!-- Cards: one per step, order must match steps below -->
-      <article class="card is-active" data-card="0"><h2>RELIABLE SOFTWARE. HUMAN-FIRST DESIGN</h2></article>
-      <article class="card" data-card="1"><div class="muted">Cloud • Software • Human-Centered Designs</div></article>
-      <article class="card" data-card="2"><p>Mission-ready mindset. Built under pressure. Built to last.</p></article>
-      <article class="card" data-card="3"><p>From the flightline to the cloud. Same discipline—new tools.</p></article>
-      <article class="card" data-card="4"><p>Reliable software, not fragile demos.</p></article>
-      <article class="card" data-card="5"><p>C# / .NET is my home base. Strong fundamentals, modern patterns.</p></article>
-      <article class="card" data-card="6"><p>Azure-first thinking. Deploy, monitor, improve—repeat.</p></article>
-      <article class="card" data-card="7"><p>I design for humans. Clear flows. Less friction.</p></article>
-      <article class="card" data-card="8"><p>Security is the baseline. Validate inputs. Defend the edges.</p></article>
-      <article class="card" data-card="9"><p>I turn chaos into structure. Systems, checklists, and clean execution.</p></article>
-      <article class="card" data-card="10"><p>Calm under load. When things break, I debug—not panic.</p></article>
-      <article class="card" data-card="11"><p>Small releases. Big momentum.</p></article>
-      <article class="card" data-card="12"><p>Projects that prove it. Real apps, real commits, real lessons.</p></article>
-      <article class="card" data-card="13"><p>Let's build something dependable.<br>Build it clean. Keep it maintainable.</p></article>
-      <article class="card" data-card="14"><p>C# / .NET developer. OOP, SOLID habits, readable code.</p></article>
-      <article class="card" data-card="15"><p>Cloud-minded by default. Logs, monitoring, failure modes.</p></article>
-      <article class="card" data-card="16"><p>APIs that behave. Clear contracts, validation, predictable errors.</p></article>
-      <article class="card" data-card="17"><p>Data that makes sense. Practical modeling, clean JSON, sane persistence.</p></article>
-      <article class="card" data-card="18"><p>Performance with purpose. Fast enough—and understandable.</p></article>
-      <article class="card" data-card="19"><p>Security baked in. Inputs guarded. Outputs encoded.</p></article>
-      <article class="card" data-card="20"><p>Automation-friendly workflows. Fewer “works on my machine” moments.</p></article>
-      <article class="card" data-card="21"><p>I ship in increments. Iterate without breaking everything.</p></article>
-      <article class="card" data-card="22"><p>Bugs are just clues. Trace, isolate, fix, prevent.</p></article>
-      <article class="card" data-card="23"><p>Operational discipline. Uptime thinking, not just feature thinking.</p></article>
-      <article class="card" data-card="24"><p>Give me a problem worth owning.</p></article>
-      <article class="card" data-card="25"><p>Human-centered systems. Built for real people.</p></article>
-      <article class="card" data-card="26"><p>Clarity beats clever. Every time.</p></article>
-      <article class="card" data-card="27"><p>Design that reduces stress. Especially under pressure.</p></article>
-      <article class="card" data-card="28"><p>Information that flows. The user always knows where they are.</p></article>
-      <article class="card" data-card="29"><p>Friction is the enemy. Remove it.</p></article>
-      <article class="card" data-card="30"><p>Accessibility isn't optional. Contrast, structure, keyboard sanity.</p></article>
-      <article class="card" data-card="31"><p>Proof over opinions. Test, learn, iterate.</p></article>
-      <article class="card" data-card="32"><p>Strong defaults. Simple paths. Fewer wrong turns.</p></article>
-      <article class="card" data-card="33"><p>Design + engineering together. One product brain.</p></article>
-      <article class="card" data-card="34"><p>Make the next step obvious.</p></article>
-      <article class="card" data-card="35"><p>Build trust through consistency.</p></article>
-      <article class="card" data-card="36"><p>Good experiences feel effortless. That's the goal.</p></article>
-    </div>
-    <!-- Steps: one per card, can add data-pos for left/right/center animation -->
-    <section class="step" data-step="0" data-bg="0" data-pos="center"></section>
-    <section class="step" data-step="1" data-bg="0" data-pos="center"></section>
-    <section class="step" data-step="2" data-bg="1" data-pos="left"></section>
-    <section class="step" data-step="3" data-bg="1" data-pos="right"></section>
-    <section class="step" data-step="4" data-bg="1" data-pos="center"></section>
-    <section class="step" data-step="5" data-bg="2" data-pos="left"></section>
-    <section class="step" data-step="6" data-bg="2" data-pos="right"></section>
-    <section class="step" data-step="7" data-bg="2" data-pos="center"></section>
-    <section class="step" data-step="8" data-bg="3" data-pos="left"></section>
-    <section class="step" data-step="9" data-bg="3" data-pos="right"></section>
-    <section class="step" data-step="10" data-bg="3" data-pos="center"></section>
-    <section class="step" data-step="11" data-bg="3" data-pos="left"></section>
-    <section class="step" data-step="12" data-bg="3" data-pos="right"></section>
-    <section class="step" data-step="13" data-bg="3" data-pos="center"></section>
-    <section class="step" data-step="14" data-bg="3" data-pos="left"></section>
-    <section class="step" data-step="15" data-bg="3" data-pos="right"></section>
-    <section class="step" data-step="16" data-bg="3" data-pos="center"></section>
-    <section class="step" data-step="17" data-bg="3" data-pos="left"></section>
-    <section class="step" data-step="18" data-bg="3" data-pos="right"></section>
-    <section class="step" data-step="19" data-bg="3" data-pos="center"></section>
-    <section class="step" data-step="20" data-bg="3" data-pos="left"></section>
-    <section class="step" data-step="21" data-bg="3" data-pos="right"></section>
-    <section class="step" data-step="22" data-bg="3" data-pos="center"></section>
-    <section class="step" data-step="23" data-bg="3" data-pos="left"></section>
-    <section class="step" data-step="24" data-bg="3" data-pos="right"></section>
-    <section class="step" data-step="25" data-bg="3" data-pos="center"></section>
-    <section class="step" data-step="26" data-bg="3" data-pos="left"></section>
-    <section class="step" data-step="27" data-bg="3" data-pos="right"></section>
-    <section class="step" data-step="28" data-bg="3" data-pos="center"></section>
-    <section class="step" data-step="29" data-bg="3" data-pos="left"></section>
-    <section class="step" data-step="30" data-bg="3" data-pos="right"></section>
-    <section class="step" data-step="31" data-bg="3" data-pos="center"></section>
-    <section class="step" data-step="32" data-bg="3" data-pos="left"></section>
-    <section class="step" data-step="33" data-bg="3" data-pos="right"></section>
-    <section class="step" data-step="34" data-bg="3" data-pos="center"></section>
-    <section class="step" data-step="35" data-bg="3" data-pos="left"></section>
-    <section class="step" data-step="36" data-bg="3" data-pos="center"></section>
+  <!-- Scrollytelling steps -->
+  <main class="story" id="story">
+    <section class="step" data-bg="AirForce_Emblem.png" data-pos="left">
+      <article class="card">
+        <div class="card__head">
+          <h2>Job Title</h2>
+          <button class="expand" type="button">Expand</button>
+        </div>
+        <p class="card__tease">Your current/next title goes here.</p>
+        <div class="card__more">
+          <p>Add your “now” role target + 1–2 alternates (Cloud App Dev, Software Engineer, etc.).</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="step" data-bg="CADdets_Retro.png" data-pos="right">
+      <article class="card">
+        <div class="card__head">
+          <h2>Age</h2>
+          <button class="expand" type="button">Expand</button>
+        </div>
+        <p class="card__tease">Your current age + timeline markers.</p>
+        <div class="card__more">
+          <p>Example: “38 now • Retire Dec 2025 • Houston relocation • MSSA CAD transition.”</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="step" data-bg="CADdets_1.png" data-pos="center">
+      <article class="card">
+        <div class="card__head">
+          <h2>Likes</h2>
+          <button class="expand" type="button">Expand</button>
+        </div>
+        <p class="card__tease">What you lean toward (work + life).</p>
+        <div class="card__more">
+          <p>Systems, structure, reliability, learning, building useful tools, mission-driven teams, etc.</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="step" data-bg="Tech_Career.png" data-pos="bottomLeft">
+      <article class="card">
+        <div class="card__head">
+          <h2>Dislikes</h2>
+          <button class="expand" type="button">Expand</button>
+        </div>
+        <p class="card__tease">Friction points and non-negotiables.</p>
+        <div class="card__more">
+          <p>Ambiguity with no decision, sloppy standards, “move fast and break everything” culture, etc.</p>
+        </div>
+      </article>
+    </section>
+
+    <!-- Step 5 stays on Tech_Career.png (static last image) -->
+    <section class="step" data-bg="Tech_Career.png" data-pos="bottomRight">
+      <article class="card">
+        <div class="card__head">
+          <h2>Transferable Skills</h2>
+          <button class="expand" type="button">Expand</button>
+        </div>
+        <p class="card__tease">Your “military → tech” bridge.</p>
+        <div class="card__more">
+          <ul>
+            <li>High-stakes leadership + calm under pressure</li>
+            <li>Process improvement + standards + QA mindset</li>
+            <li>Risk management + safety culture</li>
+            <li>Systems thinking (infra → cloud → software)</li>
+          </ul>
+        </div>
+      </article>
+    </section>
   </main>
 
-  <footer class="footer">
-    © 2026 EchoingTide1822 - James Gill
-  </footer>
+  <!-- Mouse trail element (optional) -->
+  <div id="trail" class="trail trail--off" aria-hidden="true"></div>
 
-  <noscript>
-    <div class="noscript">
-      This page needs JavaScript enabled for the scroll-driven sections to work.
-    </div>
-  </noscript>
+  <script src="./script.js"></script>
 </body>
 </html>
