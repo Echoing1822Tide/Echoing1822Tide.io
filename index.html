@@ -2,131 +2,91 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Career Lifeline — James Gill</title>
 
-  <!-- IMPORTANT: use RELATIVE paths for GitHub Pages project sites -->
-  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Preload the 4 background images -->
+  <link rel="preload" as="image" href="./AirForce_Emblem.png" />
+  <link rel="preload" as="image" href="./CADdets_Retro.png" />
+  <link rel="preload" as="image" href="./CADdets_1.png" />
+  <link rel="preload" as="image" href="./Tech_Career.png" />
+
+  <!-- Optional: preload audio (won't guarantee autoplay with sound) -->
+  <link rel="preload" as="audio" href="./I, am...me.mp3" />
 </head>
 
 <body>
-  <!-- Fixed background (two layers for smooth crossfade) -->
-  <div class="bg">
-    <div id="bgA" class="bg__layer"></div>
-    <div id="bgB" class="bg__layer bg__layer--hidden"></div>
-    <div class="bg__vignette"></div>
-  </div>
+  <!-- Fixed stage (everything you SEE). The scroll height is provided by #scrollSpacer -->
+  <div id="stage">
+    <!-- Background -->
+    <div id="bg">
+      <div class="bgLayer" id="bgA"></div>
+      <div class="bgLayer" id="bgB"></div>
 
-  <!-- Top header / controls -->
-  <header class="top">
-    <div class="top__inner">
-      <h1 class="title">Career Lifeline — James Gill</h1>
-      <p class="subtitle">Empowering tech to serve the mission. From Mission-ops to DevOps.</p>
+      <!-- Video overlay for screensaver mode -->
+      <div id="bgVideoWrap" class="bgVideoWrap" aria-hidden="true">
+        <video id="bgVideo" muted playsinline preload="auto"></video>
+      </div>
+
+      <div class="bgVignette" aria-hidden="true"></div>
+    </div>
+
+    <!-- Top UI -->
+    <header class="topbar">
+      <div class="brand">
+        <h1>Career Lifeline — James Gill</h1>
+        <p class="tag">Empowering tech to serve the mission. From Mission-ops to DevOps.</p>
+      </div>
 
       <div class="controls">
-        <a class="btn btn--primary" href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer">
+        <a class="btn" href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer">
           Connect on LinkedIn
         </a>
 
-        <button id="themeBtn" class="btn" type="button">Theme change</button>
-        <button id="trailBtn" class="btn" type="button">Mouse Trail</button>
+        <button class="btn" id="themeBtn" type="button">Theme change</button>
+        <button class="btn" id="trailBtn" type="button">Mouse Trail</button>
 
-        <div class="vol">
-          <span class="vol__label">Volume</span>
-          <input id="volSlider" class="vol__slider" type="range" min="0" max="1" step="0.01" value="0.35" />
-          <button id="playBtn" class="btn btn--small" type="button">Play</button>
+        <div class="audio">
+          <label for="vol" class="audioLabel">Volume</label>
+          <input id="vol" type="range" min="0" max="1" step="0.01" value="0.25" title="Adjust volume" />
+          <button class="btn" id="playBtn" type="button">Play</button>
         </div>
-
-        <div class="hint">Scroll ↓</div>
       </div>
+    </header>
 
-      <div class="footerMark">© 2026 EchoingTide1822 - James Gill</div>
-    </div>
-  </header>
+    <!-- Center hero + bubbles -->
+    <main id="main">
+      <section id="hero" class="hero" aria-label="Hero">
+        <div class="heroInner">
+          <div class="heroHeadline">
+            RELIABLE SOFTWARE.<br />
+            <span>HUMAN-FIRST DESIGN</span>
+          </div>
+          <div class="heroSub">Cloud • Software • Human-Centered Designs</div>
+          <div class="heroHint">Scroll ↓</div>
+        </div>
+      </section>
 
-  <!-- Music (browser will require user interaction to start) -->
-  <audio id="bgMusic" preload="auto" loop>
-    <!-- Keep the filename EXACT. Browser will URL-encode spaces automatically. -->
-    <source src="./I, am...me.mp3" type="audio/mpeg" />
-  </audio>
+      <section id="bubbleLayer" class="bubbleLayer" aria-label="Scroll beats"></section>
+    </main>
 
-  <!-- Scrollytelling steps -->
-  <main class="story" id="story">
-    <section class="step" data-bg="AirForce_Emblem.png" data-pos="left">
-      <article class="card">
-        <div class="card__head">
-          <h2>Job Title</h2>
-          <button class="expand" type="button">Expand</button>
-        </div>
-        <p class="card__tease">Your current/next title goes here.</p>
-        <div class="card__more">
-          <p>Add your “now” role target + 1–2 alternates (Cloud App Dev, Software Engineer, etc.).</p>
-        </div>
-      </article>
-    </section>
+    <!-- Secret toggle: tiny “hotspot” in bottom-right (hover reveals) -->
+    <button id="secretToggle" class="secretToggle" type="button" aria-label="Toggle screensaver mode"></button>
 
-    <section class="step" data-bg="CADdets_Retro.png" data-pos="right">
-      <article class="card">
-        <div class="card__head">
-          <h2>Age</h2>
-          <button class="expand" type="button">Expand</button>
-        </div>
-        <p class="card__tease">Your current age + timeline markers.</p>
-        <div class="card__more">
-          <p>Example: “38 now • Retire Dec 2025 • Houston relocation • MSSA CAD transition.”</p>
-        </div>
-      </article>
-    </section>
+    <footer class="footer">© 2026 EchoingTide1822 - James Gill</footer>
 
-    <section class="step" data-bg="CADdets_1.png" data-pos="center">
-      <article class="card">
-        <div class="card__head">
-          <h2>Likes</h2>
-          <button class="expand" type="button">Expand</button>
-        </div>
-        <p class="card__tease">What you lean toward (work + life).</p>
-        <div class="card__more">
-          <p>Systems, structure, reliability, learning, building useful tools, mission-driven teams, etc.</p>
-        </div>
-      </article>
-    </section>
+    <!-- Mouse trail canvas -->
+    <canvas id="trailCanvas" class="trailCanvas" aria-hidden="true"></canvas>
+  </div>
 
-    <section class="step" data-bg="Tech_Career.png" data-pos="bottomLeft">
-      <article class="card">
-        <div class="card__head">
-          <h2>Dislikes</h2>
-          <button class="expand" type="button">Expand</button>
-        </div>
-        <p class="card__tease">Friction points and non-negotiables.</p>
-        <div class="card__more">
-          <p>Ambiguity with no decision, sloppy standards, “move fast and break everything” culture, etc.</p>
-        </div>
-      </article>
-    </section>
+  <!-- This creates scroll height. The stage stays fixed. -->
+  <div id="scrollSpacer" aria-hidden="true"></div>
 
-    <!-- Step 5 stays on Tech_Career.png (static last image) -->
-    <section class="step" data-bg="Tech_Career.png" data-pos="bottomRight">
-      <article class="card">
-        <div class="card__head">
-          <h2>Transferable Skills</h2>
-          <button class="expand" type="button">Expand</button>
-        </div>
-        <p class="card__tease">Your “military → tech” bridge.</p>
-        <div class="card__more">
-          <ul>
-            <li>High-stakes leadership + calm under pressure</li>
-            <li>Process improvement + standards + QA mindset</li>
-            <li>Risk management + safety culture</li>
-            <li>Systems thinking (infra → cloud → software)</li>
-          </ul>
-        </div>
-      </article>
-    </section>
-  </main>
+  <!-- Background music -->
+  <audio id="bgm" src="./I, am...me.mp3" loop preload="auto"></audio>
 
-  <!-- Mouse trail element (optional) -->
-  <div id="trail" class="trail trail--off" aria-hidden="true"></div>
-
-  <script src="./script.js"></script>
+  <script src="script.js" defer></script>
 </body>
 </html>

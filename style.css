@@ -1,217 +1,290 @@
-:root{
-  --bg: #0b0f14;
-  --text: #e9f3ff;
-  --muted: rgba(233,243,255,.72);
-  --card: rgba(16, 22, 30, .72);
-  --stroke: rgba(233,243,255,.14);
-  --shadow: 0 18px 60px rgba(0,0,0,.45);
+:root {
+  --bg: #070a10;
+  --text: #eaf0ff;
+  --muted: rgba(234, 240, 255, 0.72);
+  --glass: rgba(20, 30, 45, 0.45);
+  --glassBorder: rgba(255, 255, 255, 0.16);
+  --shadow: rgba(0, 0, 0, 0.55);
+
+  /* Background “not too dark” tuning */
+  --bgBrightness: 1.10;
+  --bgContrast: 1.05;
+  --vignetteA: 0.35;
+  --vignetteB: 0.55;
 }
 
-*{ box-sizing:border-box; }
+:root[data-theme="light"] {
+  --bg: #f6f8ff;
+  --text: #111827;
+  --muted: rgba(17, 24, 39, 0.70);
+  --glass: rgba(255, 255, 255, 0.62);
+  --glassBorder: rgba(17, 24, 39, 0.14);
+  --shadow: rgba(0, 0, 0, 0.12);
 
-html, body { height: 100%; }
-body{
-  margin:0;
-  font-family: ui-serif, Georgia, "Times New Roman", Times, serif;
+  --bgBrightness: 1.05;
+  --bgContrast: 1.02;
+  --vignetteA: 0.12;
+  --vignetteB: 0.18;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
   background: var(--bg);
   color: var(--text);
-  overflow-y: auto; /* DO NOT remove: this is the “scroll works” switch */
+  overflow-x: hidden;
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
 }
 
-/* Background */
-#bg{
-  position:fixed;
-  inset:0;
-  z-index:-2;
+/* Fixed stage: always visible */
+#stage {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 1;
 }
-.bg-layer{
-  position:absolute;
-  inset:0;
+
+/* Scroll height lives here */
+#scrollSpacer {
+  height: 6000px; /* JS will override */
+}
+
+/* Background layers */
+#bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.bgLayer {
+  position: absolute;
+  inset: -2%;
   background-size: cover;
   background-position: center;
+  transform: scale(1.02);
+  filter: brightness(var(--bgBrightness)) contrast(var(--bgContrast)) saturate(1.08);
   opacity: 0;
-  transition: opacity 900ms ease;
-  filter: saturate(1.05) contrast(1.05);
+  transition: opacity 650ms ease;
+  will-change: opacity;
 }
-.bg-layer.is-visible{ opacity: 0.55; }
 
-.bg-vignette{
-  position:absolute;
-  inset:0;
+.bgVignette {
+  position: absolute;
+  inset: 0;
   background:
-    radial-gradient(70% 70% at 50% 35%, rgba(0,0,0,.10), rgba(0,0,0,.65)),
-    linear-gradient(to bottom, rgba(0,0,0,.55), rgba(0,0,0,.72));
+    radial-gradient(circle at 30% 20%, rgba(0,0,0,var(--vignetteA)) 0%, rgba(0,0,0,0) 48%),
+    radial-gradient(circle at 70% 70%, rgba(0,0,0,var(--vignetteA)) 0%, rgba(0,0,0,0) 52%),
+    linear-gradient(to bottom, rgba(0,0,0,var(--vignetteB)), rgba(0,0,0,0) 32%, rgba(0,0,0,var(--vignetteB)));
+  pointer-events: none;
 }
 
-/* Header / controls */
-.topbar{
-  padding: 26px 26px 10px;
-  max-width: 980px;
+/* Video overlay (screensaver mode) */
+.bgVideoWrap {
+  position: absolute;
+  inset: 0;
+  display: none;
+  z-index: 2;
 }
-.topbar h1{
-  margin: 0 0 8px;
-  font-size: 40px;
-  letter-spacing: .4px;
+
+.bgVideoWrap video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(1.05) contrast(1.03) saturate(1.06);
 }
-.tagline{
-  margin: 0 0 14px;
+
+/* Topbar */
+.topbar {
+  position: relative;
+  z-index: 5;
+  padding: 26px 28px 12px 28px;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: clamp(28px, 3.1vw, 44px);
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.tag {
+  margin: 10px 0 0 0;
   color: var(--muted);
   font-style: italic;
+  font-size: clamp(14px, 1.2vw, 18px);
 }
 
-.controls{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  align-items:center;
-  position: relative;
+.controls {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
 }
 
-.btn{
-  appearance:none;
-  border: 1px solid var(--stroke);
-  background: rgba(0,0,0,.18);
+.btn {
+  appearance: none;
+  border: 1px solid var(--glassBorder);
+  background: rgba(10, 14, 22, 0.35);
   color: var(--text);
   padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor:pointer;
-  text-decoration:none;
-  user-select:none;
-  -webkit-user-select: none;
+  border-radius: 10px;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
 
-.btn:hover{ border-color: rgba(233,243,255,.30); }
-
-.audio{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  padding-left: 6px;
+.btn:hover {
+  transform: translateY(-1px);
 }
-.audio-label{ font-size: 13px; color: var(--muted); }
-#volume{ width: 140px; }
 
-.secret{
-  position:absolute;
-  right:-6px;
-  top:-6px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1px solid var(--stroke);
-  background: rgba(0,0,0,.22);
-  color: transparent;
-  opacity: .12;
-  cursor: pointer;
+.audio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-.topbar:hover .secret{ opacity: .35; color: var(--muted); }
 
-.scrollHint{
-  margin-top: 8px;
+.audioLabel {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
 }
 
-/* Scrollytelling */
-.scrolly{
+#vol {
+  width: 160px;
+}
+
+main {
   position: relative;
-  margin-top: 14px;
-}
-
-/* Sticky “stage” where cards appear */
-.stage{
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  z-index: 3;
+  flex: 1;
   display: grid;
   place-items: center;
-  pointer-events: none; /* stage ignores clicks… */
+}
+
+/* Hero */
+.hero {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.heroInner {
+  width: min(980px, 92vw);
+  text-align: center;
   padding: 20px;
 }
 
-/* …but cards can be clicked */
-.card{
-  pointer-events: auto;
-  position: absolute;
-  width: min(720px, 92vw);
-  padding: 18px 18px 14px;
-  border-radius: 14px;
-  background: var(--card);
-  border: 1px solid var(--stroke);
-  box-shadow: var(--shadow);
-  opacity: 0;
-  transform: translate3d(var(--x,0), var(--y,18px), 0) scale(var(--s,0.98));
-  transition:
-    opacity 360ms cubic-bezier(.2,.8,.2,1),
-    transform 520ms cubic-bezier(.2,.8,.2,1);
-  z-index: 1;
-  pointer-events: none;
-}
-.card.is-active{
-  opacity: 1;
-  transform: translate3d(var(--x,0), var(--y,0), 0) scale(1);
-  z-index: 2;
-  pointer-events: auto;
+.heroHeadline {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  font-size: clamp(40px, 6vw, 82px);
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  line-height: 1.02;
+  text-shadow: 0 10px 40px rgba(0,0,0,0.35);
 }
 
-.card h2{
-  margin: 0 0 10px;
-  font-size: 30px;
+.heroHeadline span {
+  display: inline-block;
+  font-weight: 800;
 }
 
-.muted{ color: var(--muted); }
-
-.mini{
-  position:absolute;
-  right: 14px;
-  top: 14px;
-  border: 1px solid var(--stroke);
-  background: rgba(0,0,0,.18);
-  color: var(--text);
-  border-radius: 8px;
-  padding: 6px 10px;
-  cursor:pointer;
-}
-
-.cardBody{
-  max-height: 220px;
-  overflow: hidden;
-  transition: max-height 400ms ease;
-}
-.cardBody.is-open{ max-height: 900px; }
-
-/* Scroll steps — these create the page height */
-.step{
-  min-height: 100vh;
-}
-
-/* Footer */
-.footer{
-  padding: 18px 26px 30px;
+.heroSub {
+  margin-top: 14px;
+  font-size: clamp(16px, 1.8vw, 22px);
   color: var(--muted);
 }
 
-/* Debug: show step blocks if you toggle the secret button */
-body.debug .step{
-  outline: 2px dashed rgba(0,255,255,.25);
-  outline-offset: -10px;
+.heroHint {
+  margin-top: 22px;
+  font-size: 14px;
+  color: var(--muted);
+  opacity: 0.95;
 }
 
-/* Mouse trail dot */
-.trail-dot{
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: rgba(0,255,255,.6);
+/* Bubble layer */
+.bubbleLayer {
+  position: absolute;
+  inset: 0;
   pointer-events: none;
-  transform: translate(-50%, -50%);
-  z-index: 9999;
-  display:none;
 }
-body.trail-on .trail-dot{ display:block; }
+
+.bubble {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate3d(-50%, -50%, 0);
+  width: min(720px, 86vw);
+  padding: 20px 22px;
+  border-radius: 999px;
+  background: var(--glass);
+  border: 1px solid var(--glassBorder);
+  box-shadow: 0 24px 70px var(--shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+  will-change: transform, opacity;
+  opacity: 0;
+}
+
+.bubble span {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  font-size: clamp(18px, 2.3vw, 34px);
+  font-weight: 700;
+  line-height: 1.18;
+  letter-spacing: 0.2px;
+  padding: 0 8px;
+}
+
+/* Footer */
+.footer {
+  position: relative;
+  z-index: 5;
+  padding: 14px 28px 20px 28px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Secret toggle hotspot */
+.secretToggle {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.04);
+  opacity: 0.08;
+  z-index: 10;
+  cursor: pointer;
+}
+
+.secretToggle:hover {
+  opacity: 0.30;
+}
+
+/* Mouse trail canvas */
+.trailCanvas {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  display: none;
+}
