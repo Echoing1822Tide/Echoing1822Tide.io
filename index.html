@@ -4,139 +4,128 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Career Lifeline — James Gill</title>
-
   <link rel="stylesheet" href="./style.css" />
+  <script src="./app.js" defer></script>
 </head>
-<body data-theme="dark">
-  <!-- Fixed background layers (crossfades + white flash between images) -->
+
+<body>
+  <!-- Background layers (fade between images) -->
   <div id="bg" aria-hidden="true">
-    <div class="bg-layer" id="bgA"></div>
-    <div class="bg-layer" id="bgB"></div>
-    <div id="bgFlash"></div>
+    <div class="bg-layer is-visible" data-bg="0" style="background-image:url('./AirForce_Emblem.png')"></div>
+    <div class="bg-layer" data-bg="1" style="background-image:url('./CADdets_Retro.png')"></div>
+    <div class="bg-layer" data-bg="2" style="background-image:url('./CADdets_1.png')"></div>
+    <div class="bg-layer" data-bg="3" style="background-image:url('./Tech_Career.png')"></div>
+    <div class="bg-vignette"></div>
   </div>
 
-  <!-- Mouse trail (optional toggle) -->
-  <div id="trail" aria-hidden="true"></div>
-
   <header class="topbar">
-    <div class="brand">
-      <h1>Career Lifeline — James Gill</h1>
-      <p class="tagline"><em>Empowering tech to serve the mission. From Mission-ops to DevOps.</em></p>
-    </div>
+    <h1>Career Lifeline — James Gill</h1>
+    <p class="tagline">Empowering tech to serve the mission. From Mission-ops to DevOps.</p>
 
     <div class="controls">
-      <a class="btn" href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer">Connect on LinkedIn</a>
+      <a class="btn" href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer">
+        Connect on LinkedIn
+      </a>
 
-      <button class="btn" id="themeBtn" type="button" aria-pressed="false">Theme change</button>
-      <button class="btn" id="trailBtn" type="button" aria-pressed="false">Mouse Trail</button>
+      <button class="btn" id="themeToggle" type="button">Theme change</button>
+      <button class="btn" id="trailToggle" type="button">Mouse Trail</button>
 
-      <div class="vol">
-        <label for="volRange">Volume</label>
-        <input id="volRange" type="range" min="0" max="1" step="0.01" value="0.25" />
-        <button class="btn" id="playBtn" type="button">Play</button>
+      <div class="audio">
+        <label class="audio-label" for="volume">Volume</label>
+        <input id="volume" type="range" min="0" max="1" step="0.01" value="0.35" />
+        <button class="btn" id="playPause" type="button">Play</button>
       </div>
+
+      <!-- “Hidden” button: tiny + low opacity until you hover the header -->
+      <button class="secret" id="secretBtn" type="button" aria-label="Debug toggle">•</button>
     </div>
+
+    <div class="scrollHint">Scroll ↓</div>
   </header>
 
-  <!-- Audio (note: autoplay is usually blocked until user clicks Play) -->
-  <audio id="bgAudio" loop preload="auto">
-    <source src="./I,%20am...me.mp3" type="audio/mpeg" />
-  </audio>
+  <!-- IMPORTANT: audio src must be a WEB path, not C:\... -->
+  <!-- Your filename has a space; spaces must be URL-encoded as %20 -->
+  <audio id="bgMusic" preload="auto" loop src="./I,%20am...me.mp3"></audio>
 
-  <main>
-    <!-- Hero spacer so first “real” thing is Block 1 as you begin to scroll -->
-    <section id="hero" aria-label="Intro">
-      <div class="hero-inner">
-        <div class="hero-pill">Scroll ↓</div>
-      </div>
-    </section>
+  <main class="scrolly" id="scrolly">
+    <!-- Sticky stage: cards appear here while you scroll through steps -->
+    <div class="stage">
+      <article class="card is-active" data-card="0">
+        <h2>Job Title</h2>
+        <button class="mini" type="button" data-expand="0">Expand</button>
+        <div class="cardBody" data-body="0">
+          <p>Your current/next title goes here.</p>
+          <p class="muted">Example: Cloud App Developer • C#/.NET • Azure</p>
+        </div>
+      </article>
 
-    <!-- Scrollytelling area -->
-    <section id="scrolly" aria-label="Career Lifeline Sections">
-      <!-- Sticky stage -->
-      <div id="stage">
-        <article id="card" class="card" role="region" aria-live="polite"></article>
-      </div>
+      <article class="card" data-card="1">
+        <h2>Age</h2>
+        <button class="mini" type="button" data-expand="1">Expand</button>
+        <div class="cardBody" data-body="1">
+          <p>Your current age + timeline markers.</p>
+          <p class="muted">Example: 38 now • Retire 2025 • Build 2026</p>
+        </div>
+      </article>
 
-      <!-- Steps (these drive what appears in the sticky stage) -->
-      <div id="steps">
-        <section class="step" data-pos="left">
-          <template>
-            <h2>Job Title</h2>
-            <p>Your current/next title goes here.</p>
-            <details>
-              <summary>Expand</summary>
-              <div class="details">
-                <p>Add extra context, milestones, or a short “why this matters” line.</p>
-              </div>
-            </details>
-          </template>
-        </section>
+      <article class="card" data-card="2">
+        <h2>Likes</h2>
+        <button class="mini" type="button" data-expand="2">Expand</button>
+        <div class="cardBody" data-body="2">
+          <p>What you lean toward (work + life).</p>
+          <ul>
+            <li>Clear requirements</li>
+            <li>Reliable systems</li>
+            <li>Learning + building</li>
+          </ul>
+        </div>
+      </article>
 
-        <section class="step" data-pos="right">
-          <template>
-            <h2>Age</h2>
-            <p>Your current age + timeline markers.</p>
-            <details>
-              <summary>Expand</summary>
-              <div class="details">
-                <p>Example: “38 now. Retire Dec 2025. Houston area next.”</p>
-              </div>
-            </details>
-          </template>
-        </section>
+      <article class="card" data-card="3">
+        <h2>Dislikes</h2>
+        <button class="mini" type="button" data-expand="3">Expand</button>
+        <div class="cardBody" data-body="3">
+          <p>Friction points and non-negotiables.</p>
+          <ul>
+            <li>Ambiguity without communication</li>
+            <li>Low-integrity shortcuts</li>
+            <li>Chaos with no ownership</li>
+          </ul>
+        </div>
+      </article>
 
-        <section class="step" data-pos="center">
-          <template>
-            <h2>Likes</h2>
-            <p>What you lean toward (work + life).</p>
-            <details>
-              <summary>Expand</summary>
-              <div class="details">
-                <p>Examples: customer empathy, clean systems, strong standards, calm teams.</p>
-              </div>
-            </details>
-          </template>
-        </section>
+      <article class="card" data-card="4">
+        <h2>Transferable Skills</h2>
+        <button class="mini" type="button" data-expand="4">Expand</button>
+        <div class="cardBody" data-body="4">
+          <p>Your “military → tech” bridge.</p>
+          <ul>
+            <li>Risk management</li>
+            <li>Process improvement</li>
+            <li>Leading under pressure</li>
+            <li>Systems thinking</li>
+          </ul>
+        </div>
+      </article>
+    </div>
 
-        <section class="step" data-pos="leftFar">
-          <template>
-            <h2>Dislikes</h2>
-            <p>Friction points and non-negotiables.</p>
-            <details>
-              <summary>Expand</summary>
-              <div class="details">
-                <p>Examples: chaos-without-ownership, vague requirements, sloppy quality.</p>
-              </div>
-            </details>
-          </template>
-        </section>
-
-        <section class="step" data-pos="rightFar">
-          <template>
-            <h2>Transferable Skills</h2>
-            <p>Your “military → tech” bridge.</p>
-            <details>
-              <summary>Expand</summary>
-              <div class="details">
-                <ul>
-                  <li>Systems thinking</li>
-                  <li>Risk management</li>
-                  <li>Process improvement</li>
-                  <li>Leadership under pressure</li>
-                </ul>
-              </div>
-            </details>
-          </template>
-        </section>
-      </div>
-    </section>
-
-    <footer class="footer">
-      <p>© 2026 EchoingTide1822 - James Gill</p>
-    </footer>
+    <!-- Scroll “steps” (these create page height + drive which card shows) -->
+    <section class="step" data-step="0" data-bg="0"></section>
+    <section class="step" data-step="1" data-bg="1"></section>
+    <section class="step" data-step="2" data-bg="2"></section>
+    <section class="step" data-step="3" data-bg="3"></section>
+    <!-- Step 5 still exists, but background stays on Tech_Career.png -->
+    <section class="step" data-step="4" data-bg="3"></section>
   </main>
 
-  <script src="./script.js" defer></script>
+  <footer class="footer">
+    © 2026 EchoingTide1822 - James Gill
+  </footer>
+
+  <noscript>
+    <div class="noscript">
+      This page needs JavaScript enabled for the scroll-driven sections to work.
+    </div>
+  </noscript>
 </body>
 </html>
