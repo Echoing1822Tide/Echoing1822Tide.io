@@ -48,7 +48,6 @@
   <audio id="bgMusic" preload="auto" loop src="./I,%20am...me.mp3"></audio>
 
   <main class="scrolly" id="scrolly">
-    <!-- Sticky stage: cards appear here while you scroll through steps -->
     <div class="stage">
       <article class="card is-active" data-card="0">
         <h2>Job Title</h2>
@@ -68,54 +67,96 @@
         </div>
       </article>
 
+      <!-- Likes (each as its own card) -->
       <article class="card" data-card="2">
         <h2>Likes</h2>
         <button class="mini" type="button" data-expand="2">Expand</button>
         <div class="cardBody" data-body="2">
-          <p>What you lean toward (work + life).</p>
-          <ul>
-            <li>Clear requirements</li>
-            <li>Reliable systems</li>
-            <li>Learning + building</li>
-          </ul>
+          <p>Clear requirements</p>
         </div>
       </article>
-
       <article class="card" data-card="3">
-        <h2>Dislikes</h2>
+        <h2>Likes</h2>
         <button class="mini" type="button" data-expand="3">Expand</button>
         <div class="cardBody" data-body="3">
-          <p>Friction points and non-negotiables.</p>
-          <ul>
-            <li>Ambiguity without communication</li>
-            <li>Low-integrity shortcuts</li>
-            <li>Chaos with no ownership</li>
-          </ul>
+          <p>Reliable systems</p>
+        </div>
+      </article>
+      <article class="card" data-card="4">
+        <h2>Likes</h2>
+        <button class="mini" type="button" data-expand="4">Expand</button>
+        <div class="cardBody" data-body="4">
+          <p>Learning + building</p>
         </div>
       </article>
 
-      <article class="card" data-card="4">
+      <!-- Dislikes (each as its own card) -->
+      <article class="card" data-card="5">
+        <h2>Dislikes</h2>
+        <button class="mini" type="button" data-expand="5">Expand</button>
+        <div class="cardBody" data-body="5">
+          <p>Ambiguity without communication</p>
+        </div>
+      </article>
+      <article class="card" data-card="6">
+        <h2>Dislikes</h2>
+        <button class="mini" type="button" data-expand="6">Expand</button>
+        <div class="cardBody" data-body="6">
+          <p>Low-integrity shortcuts</p>
+        </div>
+      </article>
+      <article class="card" data-card="7">
+        <h2>Dislikes</h2>
+        <button class="mini" type="button" data-expand="7">Expand</button>
+        <div class="cardBody" data-body="7">
+          <p>Chaos with no ownership</p>
+        </div>
+      </article>
+
+      <!-- Transferable Skills (each as its own card) -->
+      <article class="card" data-card="8">
         <h2>Transferable Skills</h2>
-        <button class="mini" type="button" data-expand="4">Expand</button>
-        <div class="cardBody" data-body="4">
-          <p>Your “military → tech” bridge.</p>
-          <ul>
-            <li>Risk management</li>
-            <li>Process improvement</li>
-            <li>Leading under pressure</li>
-            <li>Systems thinking</li>
-          </ul>
+        <button class="mini" type="button" data-expand="8">Expand</button>
+        <div class="cardBody" data-body="8">
+          <p>Risk management</p>
+        </div>
+      </article>
+      <article class="card" data-card="9">
+        <h2>Transferable Skills</h2>
+        <button class="mini" type="button" data-expand="9">Expand</button>
+        <div class="cardBody" data-body="9">
+          <p>Process improvement</p>
+        </div>
+      </article>
+      <article class="card" data-card="10">
+        <h2>Transferable Skills</h2>
+        <button class="mini" type="button" data-expand="10">Expand</button>
+        <div class="cardBody" data-body="10">
+          <p>Leading under pressure</p>
+        </div>
+      </article>
+      <article class="card" data-card="11">
+        <h2>Transferable Skills</h2>
+        <button class="mini" type="button" data-expand="11">Expand</button>
+        <div class="cardBody" data-body="11">
+          <p>Systems thinking</p>
         </div>
       </article>
     </div>
 
-    <!-- Scroll “steps” (these create page height + drive which card shows) -->
+    <!-- One step per card -->
     <section class="step" data-step="0" data-bg="0"></section>
     <section class="step" data-step="1" data-bg="1"></section>
     <section class="step" data-step="2" data-bg="2"></section>
     <section class="step" data-step="3" data-bg="3"></section>
-    <!-- Step 5 still exists, but background stays on Tech_Career.png -->
     <section class="step" data-step="4" data-bg="3"></section>
+    <section class="step" data-step="5" data-bg="3"></section>
+    <section class="step" data-step="6" data-bg="3"></section>
+    <section class="step" data-step="7" data-bg="3"></section>
+    <section class="step" data-step="8" data-bg="3"></section>
+    <section class="step" data-step="9" data-bg="3"></section>
+    <section class="step" data-step="10" data-bg="3"></section>
+    <section class="step" data-step="11" data-bg="3"></section>
   </main>
 
   <footer class="footer">
