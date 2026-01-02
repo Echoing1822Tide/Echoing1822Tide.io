@@ -1,379 +1,392 @@
-/* app.js — Career Lifeline scrollytelling (GSAP + ScrollTrigger)
-   Drop this file next to index.html, style.css, and your assets. */
+/* global gsap, ScrollTrigger */
 
-(() => {
-  const $ = (sel, root = document) => root.querySelector(sel);
+(function () {
+  // --- Safety check
+  if (!window.gsap || !window.ScrollTrigger) {
+    console.warn("GSAP / ScrollTrigger not loaded.");
+    return;
+  }
+  gsap.registerPlugin(ScrollTrigger);
 
-  const bgLayers = Array.from($("#bg").querySelectorAll(".bg-layer"));
-  const bubblesEl = $("#bubbles");
-  const spacerEl = $("#spacer");
-  const fallbackList = $("#fallbackList");
+  // --- Elements
+  const bubblesRoot = document.getElementById("bubbles");
+  const spacer = document.getElementById("spacer");
+  const stage = document.querySelector(".stage");
 
-  const hero = $("#hero");
-  const tapToStart = $("#tapToStart");
-
-  const bgm = $("#bgm");
-  const playBtn = $("#playBtn");
-  const vol = $("#vol");
-
-  const themeBtn = $("#themeBtn");
-  const trailBtn = $("#trailBtn");
-
-  const vaultHotspot = $("#vaultHotspot");
-  const vault = $("#vault");
-  const vaultClose = $("#vaultClose");
-  const vaultVideo = $("#vaultVideo");
-  const vaultMeta = $("#vaultMeta");
-  const prevVid = $("#prevVid");
-  const nextVid = $("#nextVid");
-
-  // Assets (same folder as index.html)
-  const BG_ORDER = [
-    "AirForce_Emblem.png",
-    "CADdets_Retro.png",
-    "CADdets_1.png",
-    "Tech_Career.png",
+  const bgLayers = [
+    document.getElementById("bg1"),
+    document.getElementById("bg2"),
+    document.getElementById("bg3"),
+    document.getElementById("bg4"),
   ];
 
-  const IMAGE_FILES = Array.from({ length: 12 }, (_, i) => `${i + 1}_Website.png`);
+  const themeToggle = document.getElementById("themeToggle");
+  const trailToggle = document.getElementById("trailToggle");
 
-  const VIDEOS = [
-    "Screensaver-1.mp4",
-    "Screensaver-4.mp4",
-    "Screensaver-5.mp4",
-    "Alien-Beach-Waves.mp4",
+  const bgm = document.getElementById("bgm");
+  const vol = document.getElementById("vol");
+  const playBtn = document.getElementById("playBtn");
+  const soundHint = document.getElementById("soundHint");
+
+  const vaultHotspot = document.getElementById("vaultHotspot");
+  const vaultModal = document.getElementById("vaultModal");
+  const vaultClose = document.getElementById("vaultClose");
+
+  // --- Your “beats” (mix images + text)
+  // NOTE: Add/remove items here. Images must exist in repo root.
+  const beats = [
+    // Image replacements you created:
+    { type: "image", src: "./1_Website.png" },
+    { type: "image", src: "./2_Website.png" },
+    { type: "image", src: "./3_Website.png" },
+    { type: "image", src: "./4_Website.png" },
+    { type: "image", src: "./5_Website.png" },
+    { type: "image", src: "./6_Website.png" },
+    { type: "image", src: "./7_Website.png" },
+    { type: "image", src: "./8_Website.png" },
+    { type: "image", src: "./9_Website.png" },
+    { type: "image", src: "./10_Website.png" },
+
+    // Sprinkle in “Career Lifeline” truth-bombs (resume-based)
+    { type: "text", title: "20 years U.S. Air Force.", sub: "Mission systems. High-stakes ops. Calm execution." },
+    { type: "text", title: "Led teams across 55+ locations.", sub: "Training, safety, inspections, and operational control." },
+    { type: "text", title: "$258M in assets. $4.6M in projects.", sub: "Accountability, planning, delivery." },
+    { type: "text", title: "Designed a Job Safety Program.", sub: "Built for 2,500 people. Real-world risk reduction." },
+    { type: "text", title: "BA — Organizational Management (Summa Cum Laude).", sub: "Plus AAS in Mechanical/Electrical Technology." },
+
+    // More cinematic lines (keep these as text bubbles)
+    { type: "text", title: "Build it clean.", sub: "Keep it maintainable." },
+    { type: "text", title: "Cloud-minded by default.", sub: "Logs, monitoring, failure modes." },
+    { type: "text", title: "APIs that behave.", sub: "Clear contracts, validation, predictable errors." },
+    { type: "text", title: "Bugs are just clues.", sub: "Trace. Isolate. Fix. Prevent." },
+    { type: "text", title: "Human-centered systems.", sub: "Built for real people." },
+    { type: "text", title: "Clarity beats clever.", sub: "Every time." },
+    { type: "text", title: "Accessibility isn’t optional.", sub: "Contrast. Structure. Keyboard sanity." },
+
+    { type: "text", title: "Let’s build something dependable.", sub: "Real apps. Real commits. Real lessons." },
+
+    // If you add 11/12 later, they’ll render automatically if files exist:
+    { type: "image", src: "./11_Website.png" },
+    { type: "image", src: "./12_Website.png" },
   ];
 
-  // Text beats (edit freely)
-  const TEXT_BEATS = [
-    "Mission-ready mindset. Built under pressure. Built to last.",
-    "From the flightline to the cloud. Same discipline—new tools.",
-    "Reliable software, not fragile demos.",
-    "Azure-first thinking. Deploy, monitor, improve—repeat.",
-    "I design for humans. Clear flows. Less friction.",
-    "Security is the baseline. Validate inputs. Defend the edges.",
-    "I turn chaos into structure. Systems, checklists, and clean execution.",
-    "Calm under load. When things break, I debug—not panic.",
-    "Small releases. Big momentum.",
-    "Projects that prove it. Real apps, real commits, real lessons.",
-    "Let’s build something dependable.",
+  // --- Utility
+  const vw = (n) => (window.innerWidth * n) / 100;
+  const vh = (n) => (window.innerHeight * n) / 100;
 
-    "Build it clean. Keep it maintainable.",
-    "C# / .NET developer. OOP, SOLID habits, readable code.",
-    "Cloud-minded by default. Logs, monitoring, failure modes.",
-    "APIs that behave. Clear contracts, validation, predictable errors.",
-    "Data that makes sense. Practical modeling, clean JSON, sane persistence.",
-    "Performance with purpose. Fast enough—and understandable.",
-    "Security baked in. Inputs guarded. Outputs encoded.",
-    "Automation-friendly workflows. Fewer “works on my machine” moments.",
-    "I ship in increments. Iterate without breaking everything.",
-    "Bugs are just clues. Trace, isolate, fix, prevent.",
-    "Operational discipline. Uptime thinking, not just feature thinking.",
-    "Give me a problem worth owning.",
-
-    "Human-centered systems. Built for real people.",
-    "Clarity beats clever. Every time.",
-    "Design that reduces stress. Especially under pressure.",
-    "Information that flows. The user always knows where they are.",
-    "Friction is the enemy. Remove it.",
-    "Accessibility isn’t optional. Contrast, structure, keyboard sanity.",
-    "Proof over opinions. Test, learn, iterate.",
-    "Strong defaults. Simple paths. Fewer wrong turns.",
-    "Design + engineering together. One product brain.",
-    "Make the next step obvious.",
-    "Build trust through consistency.",
-    "Good experiences feel effortless. That’s the goal.",
+  // Lane positions around center (Luma-ish scatter)
+  // x/y are offsets from center in px (computed via vw/vh each time)
+  const lanes = [
+    () => ({ x: 0,         y: 0,         s: 1.12 }),
+    () => ({ x: -vw(28),   y: -vh(12),   s: 0.92 }),
+    () => ({ x: vw(28),    y: -vh(10),   s: 0.92 }),
+    () => ({ x: -vw(34),   y: vh(16),    s: 0.88 }),
+    () => ({ x: vw(34),    y: vh(16),    s: 0.88 }),
+    () => ({ x: -vw(8),    y: -vh(26),   s: 0.82 }),
+    () => ({ x: vw(10),    y: -vh(26),   s: 0.82 }),
+    () => ({ x: -vw(12),   y: vh(28),    s: 0.82 }),
+    () => ({ x: vw(12),    y: vh(28),    s: 0.82 }),
   ];
 
-  function buildBeats() {
-    const beats = [];
-    let imgIdx = 0;
+  // --- Preload images so they don't “pop” mid-scroll
+  function preload() {
+    const srcs = new Set([
+      "./AirForce_Emblem.png",
+      "./CADdets_Retro.png",
+      "./CADdets_1.png",
+      "./Tech_Career.png",
+      ...beats.filter(b => b.type === "image").map(b => b.src),
+    ]);
 
-    for (let i = 0; i < TEXT_BEATS.length; i++) {
-      // sprinkle an image roughly every 3 text beats, up to 12 images
-      if (i !== 0 && i % 3 === 1 && imgIdx < IMAGE_FILES.length) {
-        beats.push({ type: "img", src: `./${IMAGE_FILES[imgIdx++]}` });
-      }
-      beats.push({ type: "text", text: TEXT_BEATS[i] });
-    }
-
-    while (imgIdx < IMAGE_FILES.length) {
-      beats.push({ type: "img", src: `./${IMAGE_FILES[imgIdx++]}` });
-    }
-
-    return beats;
-  }
-
-  const BEATS = buildBeats();
-
-  // Fallback list (if GSAP fails)
-  BEATS.forEach((b) => {
-    const li = document.createElement("li");
-    li.textContent = b.type === "img" ? b.src.replace("./", "") : b.text;
-    fallbackList.appendChild(li);
-  });
-
-  // Theme toggle
-  themeBtn.addEventListener("click", () => {
-    document.body.classList.toggle("theme-light");
-  });
-
-  // Mouse trail (optional)
-  let trailOn = false;
-  let trailDot = null;
-
-  function onMove(e) {
-    if (!trailDot) return;
-    trailDot.style.transform = `translate(${e.clientX - 5}px, ${e.clientY - 5}px)`;
-  }
-
-  function setTrail(on) {
-    trailOn = on;
-    if (!trailOn) {
-      if (trailDot) trailDot.remove();
-      trailDot = null;
-      window.removeEventListener("pointermove", onMove);
-      return;
-    }
-    trailDot = document.createElement("div");
-    trailDot.style.cssText = `
-      position: fixed; left: 0; top: 0;
-      width: 10px; height: 10px; border-radius: 999px;
-      background: rgba(34,211,238,0.65);
-      pointer-events: none; z-index: 60;
-      transform: translate(-999px,-999px);
-    `;
-    document.body.appendChild(trailDot);
-    window.addEventListener("pointermove", onMove, { passive: true });
-  }
-
-  trailBtn.addEventListener("click", () => setTrail(!trailOn));
-
-  // Audio (autoplay may be blocked by browser policy)
-  vol.addEventListener("input", () => {
-    bgm.volume = Number(vol.value);
-  });
-
-  playBtn.addEventListener("click", async () => {
-    try {
-      bgm.volume = Number(vol.value);
-      if (bgm.paused) {
-        await bgm.play();
-        playBtn.textContent = "Pause";
-      } else {
-        bgm.pause();
-        playBtn.textContent = "Play";
-      }
-    } catch {
-      tapToStart.hidden = false;
-      tapToStart.focus();
-    }
-  });
-
-  tapToStart.addEventListener("click", async () => {
-    try {
-      bgm.volume = Number(vol.value);
-      await bgm.play();
-      playBtn.textContent = "Pause";
-      tapToStart.hidden = true;
-    } catch {}
-  });
-
-  (async () => {
-    try {
-      bgm.volume = Number(vol.value);
-      await bgm.play();
-      playBtn.textContent = "Pause";
-    } catch {
-      tapToStart.hidden = false;
-    }
-  })();
-
-  // Video vault (hidden hotspot)
-  let vidIdx = 0;
-
-  function setVideo(i) {
-    vidIdx = (i + VIDEOS.length) % VIDEOS.length;
-    vaultVideo.src = `./${VIDEOS[vidIdx]}`;
-    vaultMeta.textContent = `${VIDEOS[vidIdx]} (${vidIdx + 1}/${VIDEOS.length})`;
-    vaultVideo.play().catch(() => {});
-  }
-
-  function openVault() {
-    vault.hidden = false;
-    setVideo(vidIdx);
-  }
-  function closeVault() {
-    vault.hidden = true;
-    vaultVideo.pause();
-  }
-
-  vaultHotspot.addEventListener("click", openVault);
-  vaultClose.addEventListener("click", closeVault);
-  prevVid.addEventListener("click", () => setVideo(vidIdx - 1));
-  nextVid.addEventListener("click", () => setVideo(vidIdx + 1));
-  vault.addEventListener("click", (e) => {
-    if (e.target === vault) closeVault();
-  });
-
-  window.addEventListener("keydown", (e) => {
-    if (e.key.toLowerCase() === "v") {
-      if (vault.hidden) openVault();
-      else closeVault();
-    }
-  });
-
-  // Background preload + setup
-  function preloadImage(src) {
-    return new Promise((resolve) => {
+    srcs.forEach((src) => {
       const img = new Image();
-      img.onload = () => resolve(true);
-      img.onerror = () => resolve(false);
       img.src = src;
     });
   }
 
-  async function initBackground() {
-    for (let i = 0; i < bgLayers.length; i++) {
-      bgLayers[i].src = `./${BG_ORDER[i]}`;
-    }
-    await Promise.all(BG_ORDER.map((f) => preloadImage(`./${f}`)));
+  // --- Render bubbles
+  function createBubble(beat) {
+    const el = document.createElement("div");
+    el.className = "bubble " + (beat.type === "image" ? "image" : "text");
 
-    bgLayers.forEach((l) => (l.style.opacity = "0"));
-    bgLayers[0].style.opacity = "1";
+    if (beat.type === "image") {
+      const img = document.createElement("img");
+      img.loading = "eager";
+      img.decoding = "async";
+      img.src = beat.src;
+      img.alt = "";
+      el.appendChild(img);
+    } else {
+      const t = document.createElement("div");
+      t.className = "bubbleTitle";
+      t.textContent = beat.title;
+
+      const s = document.createElement("div");
+      s.className = "bubbleSub";
+      s.textContent = beat.sub || "";
+
+      el.appendChild(t);
+      el.appendChild(s);
+    }
+
+    bubblesRoot.appendChild(el);
+    return el;
   }
 
-  function setBackgroundByProgress(p) {
-    // transitions in first ~35% then holds final image
-    const phase = 0.35;
-    const q = Math.min(1, Math.max(0, p / phase));
-    const n = bgLayers.length;
+  // --- Background crossfade timeline (1→2→3→4 then hold)
+  function makeBgTimeline() {
+    // Start with first bg visible
+    gsap.set(bgLayers, { autoAlpha: 0 });
+    gsap.set(bgLayers[0], { autoAlpha: 1 });
 
-    const x = q * (n - 1);
-    const i = Math.floor(x);
-    const t = x - i;
+    const tl = gsap.timeline({ defaults: { ease: "none" } });
 
-    bgLayers.forEach((l) => (l.style.opacity = "0"));
+    // Each crossfade takes 1 unit
+    tl.to(bgLayers[0], { autoAlpha: 0 }, 1);
+    tl.to(bgLayers[1], { autoAlpha: 1 }, 1);
 
-    if (i >= n - 1) {
-      bgLayers[n - 1].style.opacity = "1";
-      return;
-    }
+    tl.to(bgLayers[1], { autoAlpha: 0 }, 2);
+    tl.to(bgLayers[2], { autoAlpha: 1 }, 2);
 
-    bgLayers[i].style.opacity = String(1 - t);
-    bgLayers[i + 1].style.opacity = String(t);
+    tl.to(bgLayers[2], { autoAlpha: 0 }, 3);
+    tl.to(bgLayers[3], { autoAlpha: 1 }, 3);
+
+    // Hold last
+    tl.to({}, { duration: 1 }, 4);
+
+    return tl;
   }
 
-  // GSAP scrollytelling
-  function initGSAP() {
-    if (!window.gsap || !window.ScrollTrigger) {
-      console.warn("GSAP/ScrollTrigger not found. Falling back to static list.");
-      return;
-    }
+  // --- Luma-style overlapping bubble animation
+  function makeBubblesTimeline(bubbleEls) {
+    const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
 
-    document.body.classList.add("js-on");
-    gsap.registerPlugin(ScrollTrigger);
+    // These two numbers are the whole “5–7 bubbles visible” trick:
+    const spacing = 0.55;   // new beat starts every 0.55 units
+    const lifetime = 3.3;   // each beat stays alive ~3.3 units
+    // visible count ≈ lifetime/spacing => 3.3/0.55 = 6 bubbles on average ✅
 
-    bubblesEl.innerHTML = "";
-    const nodes = BEATS.map((beat, i) => {
-      const el = document.createElement("div");
-      el.className = "bubble" + (beat.type === "img" ? " bubble--img" : "");
-      el.style.zIndex = String(10 + i);
+    bubbleEls.forEach((el, i) => {
+      const lane = lanes[i % lanes.length]();
 
-      if (beat.type === "img") {
-        const img = document.createElement("img");
-        img.loading = "lazy";
-        img.decoding = "async";
-        img.alt = "";
-        img.src = beat.src;
-        el.appendChild(img);
-      } else {
-        const t = document.createElement("div");
-        t.className = "bubbleText";
-        t.textContent = beat.text;
-        el.appendChild(t);
-      }
+      // small drift so they “flow past”
+      const driftX = (Math.random() - 0.5) * vw(14);
+      const driftY = (Math.random() - 0.5) * vh(10);
 
-      bubblesEl.appendChild(el);
-      return el;
+      const t0 = i * spacing;
+
+      // start slightly smaller + offset, fade in
+      gsap.set(el, {
+        x: lane.x + driftX * 0.35,
+        y: lane.y + driftY * 0.35,
+        scale: lane.s * 0.88,
+        autoAlpha: 0,
+      });
+
+      // fade in & sharpen
+      tl.to(el, {
+        autoAlpha: 1,
+        scale: lane.s,
+        duration: 0.35,
+      }, t0);
+
+      // glide across its lane while alive
+      tl.to(el, {
+        x: lane.x + driftX,
+        y: lane.y + driftY,
+        duration: lifetime,
+        ease: "none"
+      }, t0);
+
+      // fade out near the end (so reverse scroll looks good too)
+      tl.to(el, {
+        autoAlpha: 0,
+        scale: lane.s * 0.92,
+        duration: 0.35,
+        ease: "power2.in"
+      }, t0 + lifetime - 0.35);
     });
 
-    const spots = [
-      { x: -380, y: -200 },
-      { x:  380, y: -200 },
-      { x: -420, y:  140 },
-      { x:  420, y:  150 },
-      { x:    0, y: -260 },
-      { x:    0, y:  240 },
-      { x: -120, y:   30 },
-      { x:  120, y:   10 },
-    ];
+    // total duration needed
+    const total = (bubbleEls.length - 1) * 0.55 + 3.3;
+    tl.to({}, { duration: 0.01 }, total);
 
-    const rnd = (min, max) => min + Math.random() * (max - min);
+    return tl;
+  }
 
-    // This is the key to “5–7 bubbles at once”
-    const STAGGER = 0.50;  // start a new bubble every 0.5s
-    const LIFE = 3.00;     // each bubble lives about 3s
+  // --- ScrollTrigger wiring
+  function setupScroll(bgTl, bubbleTl) {
+    // Make page scroll length proportional to beats
+    // (Big enough to feel cinematic, not tiny-janky)
+    const vhPerBeat = 55; // adjust if you want longer/shorter
+    spacer.style.height = `${Math.max(800, beats.length * vhPerBeat)}vh`;
 
-    const master = gsap.timeline({ defaults: { ease: "power2.out" } });
+    // Master timeline, driven by scroll progress
+    const master = gsap.timeline();
+    master.add(bgTl, 0);
+    master.add(bubbleTl, 0);
 
-    // hero fades out after scroll begins
-    master.to(hero, { autoAlpha: 0, duration: 0.9 }, 0.4);
-
-    nodes.forEach((el, i) => {
-      const spot = spots[i % spots.length];
-      const x0 = spot.x + rnd(-90, 90);
-      const y0 = spot.y + rnd(-70, 70);
-
-      const x1 = x0 + rnd(-110, 110);
-      const y1 = y0 + rnd(-90, 90);
-
-      const baseScale = rnd(0.85, 1.15);
-      const start = 0.8 + i * STAGGER;
-
-      master.fromTo(
-        el,
-        { autoAlpha: 0, x: x0, y: y0 + 40, scale: baseScale * 0.78, filter: "blur(8px)" },
-        { autoAlpha: 1, x: x0, y: y0, scale: baseScale, filter: "blur(0px)", duration: 0.55 },
-        start
-      );
-
-      master.to(el, { x: x1, y: y1, duration: LIFE - 1.10, ease: "none" }, start + 0.55);
-
-      master.to(
-        el,
-        {
-          autoAlpha: 0,
-          scale: baseScale * 1.25,
-          x: x1 + rnd(-80, 80),
-          y: y1 - rnd(40, 120),
-          filter: "blur(10px)",
-          duration: 0.55,
-          ease: "power2.in",
-        },
-        start + LIFE - 0.55
-      );
-    });
-
-    const scrollScreens = Math.max(12, Math.ceil(BEATS.length * 0.7));
-    spacerEl.style.height = `${scrollScreens * 100}vh`;
-
-    const st = ScrollTrigger.create({
+    ScrollTrigger.create({
       trigger: "#scrollArea",
       start: "top top",
-      end: () => `+=${window.innerHeight * scrollScreens}`,
-      scrub: 1.0,
+      end: "bottom bottom",
+      scrub: 1,
       pin: ".stage",
-      animation: master,
       anticipatePin: 1,
-      onUpdate: (self) => setBackgroundByProgress(self.progress),
+      animation: master,
     });
-
-    window.addEventListener("resize", () => st.refresh());
   }
 
-  (async () => {
-    await initBackground();
-    initGSAP();
-  })();
+  // --- Audio (real autoplay is blocked; we “arm” it on first interaction)
+  let audioArmed = false;
+
+  function tryStartAudio() {
+    if (audioArmed) return;
+
+    audioArmed = true;
+    soundHint.hidden = true;
+
+    bgm.volume = parseFloat(vol.value || "0.25");
+
+    const p = bgm.play();
+    if (p && typeof p.catch === "function") {
+      p.catch(() => {
+        // If still blocked, un-arm so the next gesture can try again
+        audioArmed = false;
+        soundHint.hidden = false;
+      });
+    }
+  }
+
+  function setupAudio() {
+    vol.addEventListener("input", () => {
+      bgm.volume = parseFloat(vol.value || "0.25");
+    });
+
+    playBtn.addEventListener("click", async () => {
+      tryStartAudio();
+      // if already playing, toggle pause/play
+      if (!bgm.paused) {
+        bgm.pause();
+        playBtn.textContent = "Play";
+      } else {
+        await bgm.play().catch(() => {});
+        playBtn.textContent = "Pause";
+      }
+    });
+
+    // Show hint until first successful start
+    soundHint.hidden = false;
+
+    // First user gesture triggers audio (click/tap/keydown)
+    const armEvents = ["pointerdown", "keydown", "touchstart"];
+    armEvents.forEach((ev) => window.addEventListener(ev, tryStartAudio, { once: true, passive: true }));
+  }
+
+  // --- Theme toggle
+  function setupTheme() {
+    themeToggle.addEventListener("click", () => {
+      const on = document.body.classList.toggle("alt");
+      themeToggle.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+  }
+
+  // --- Mouse trail
+  let trailOn = false;
+  const trail = document.getElementById("trail");
+  const dots = [];
+  function setupTrail() {
+    // build dots
+    for (let i = 0; i < 18; i++) {
+      const d = document.createElement("div");
+      d.className = "trDot";
+      trail.appendChild(d);
+      dots.push({ el: d, x: 0, y: 0, a: 0 });
+    }
+
+    let mx = window.innerWidth / 2;
+    let my = window.innerHeight / 2;
+
+    window.addEventListener("pointermove", (e) => {
+      mx = e.clientX;
+      my = e.clientY;
+    }, { passive: true });
+
+    gsap.ticker.add(() => {
+      if (!trailOn) return;
+
+      let x = mx, y = my;
+      dots.forEach((d, i) => {
+        d.x += (x - d.x) * (0.18 - i * 0.006);
+        d.y += (y - d.y) * (0.18 - i * 0.006);
+        x = d.x; y = d.y;
+
+        d.a = Math.max(0, 1 - i / dots.length);
+        d.el.style.transform = `translate(${d.x}px, ${d.y}px)`;
+        d.el.style.opacity = String(d.a);
+      });
+    });
+
+    trailToggle.addEventListener("click", () => {
+      trailOn = !trailOn;
+      trailToggle.setAttribute("aria-pressed", trailOn ? "true" : "false");
+      if (!trailOn) dots.forEach(d => (d.el.style.opacity = "0"));
+    });
+  }
+
+  // --- Vault modal
+  function setVault(open) {
+    vaultModal.setAttribute("aria-hidden", open ? "false" : "true");
+    if (open) {
+      // Try to play previews (muted is allowed)
+      vaultModal.querySelectorAll("video").forEach(v => {
+        v.play().catch(() => {});
+      });
+    }
+  }
+  function setupVault() {
+    vaultHotspot.addEventListener("click", () => setVault(true));
+    vaultClose.addEventListener("click", () => setVault(false));
+    window.addEventListener("keydown", (e) => {
+      if (e.key.toLowerCase() === "v") {
+        const isOpen = vaultModal.getAttribute("aria-hidden") === "false";
+        setVault(!isOpen);
+      }
+      if (e.key === "Escape") setVault(false);
+    });
+    vaultModal.addEventListener("click", (e) => {
+      if (e.target === vaultModal) setVault(false);
+    });
+  }
+
+  // --- Init
+  function init() {
+    preload();
+
+    // Create bubbles
+    bubblesRoot.innerHTML = "";
+    const bubbleEls = beats.map(createBubble);
+
+    // Timelines
+    const bgTl = makeBgTimeline();
+    const bubbleTl = makeBubblesTimeline(bubbleEls);
+
+    // ScrollTrigger wiring
+    setupScroll(bgTl, bubbleTl);
+
+    // UI
+    setupAudio();
+    setupTheme();
+    setupTrail();
+    setupVault();
+
+    // Refresh on resize to keep lanes correct
+    let rAF = null;
+    window.addEventListener("resize", () => {
+      cancelAnimationFrame(rAF);
+      rAF = requestAnimationFrame(() => ScrollTrigger.refresh());
+    });
+  }
+
+  init();
 })();

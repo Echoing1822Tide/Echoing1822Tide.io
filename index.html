@@ -2,106 +2,110 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Career Lifeline — James Gill</title>
-  <meta name="description" content="Career Lifeline — James Gill. Reliable software. Human-first design." />
+
   <link rel="stylesheet" href="./style.css" />
-  <link rel="preload" as="image" href="./AirForce_Emblem.png">
-  <link rel="preload" as="image" href="./CADdets_Retro.png">
-  <link rel="preload" as="image" href="./CADdets_1.png">
-  <link rel="preload" as="image" href="./Tech_Career.png">
 </head>
+
 <body>
-  <!-- Fixed background stack -->
-  <div id="bg" aria-hidden="true">
-    <img class="bg-layer" alt="" />
-    <img class="bg-layer" alt="" />
-    <img class="bg-layer" alt="" />
-    <img class="bg-layer" alt="" />
+  <!-- Background stack -->
+  <div class="bg" aria-hidden="true">
+    <img class="bg-layer" id="bg1" src="./AirForce_Emblem.png" alt="" />
+    <img class="bg-layer" id="bg2" src="./CADdets_Retro.png" alt="" />
+    <img class="bg-layer" id="bg3" src="./CADdets_1.png" alt="" />
+    <img class="bg-layer" id="bg4" src="./Tech_Career.png" alt="" />
     <div class="bg-overlay"></div>
   </div>
 
-  <main id="scrollArea">
-    <!-- Pinned stage -->
-    <section class="stage" aria-label="Career Lifeline scrollytelling stage">
-      <header class="topbar">
-        <a class="link" href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer">Connect on LinkedIn</a>
+  <!-- Top UI -->
+  <header class="topbar">
+    <div class="brand">
+      <h1>Career Lifeline — James Gill</h1>
+      <p class="tagline">Empowering tech to serve the mission. From Mission-ops to DevOps.</p>
+    </div>
 
-        <div class="controls">
-          <button id="themeBtn" class="btn" type="button" title="Toggle theme">Theme</button>
-          <button id="trailBtn" class="btn" type="button" title="Toggle mouse trail">Mouse Trail</button>
+    <div class="controls">
+      <a class="btn" href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer">Connect on LinkedIn</a>
 
-          <div class="audio">
-            <button id="playBtn" class="btn" type="button">Play</button>
-            <label class="vol">
-              <span>Volume</span>
-              <input id="vol" type="range" min="0" max="1" step="0.01" value="0.35" />
-            </label>
-          </div>
-
-          <!-- Tiny hidden hotspot (bottom-right) to open the video vault -->
-          <button id="vaultHotspot" class="vaultHotspot" type="button" aria-label="Open screensavers"></button>
-        </div>
-      </header>
-
-      <div class="hero" id="hero">
-        <h1 class="heroTitle">RELIABLE SOFTWARE. HUMAN-FIRST DESIGN</h1>
-        <p class="heroSub">Cloud • Software • Human-Centered Designs</p>
-        <div class="heroHint">
-          <span class="hintArrow">Scroll</span>
-          <span class="hintArrow">↓</span>
-        </div>
-      </div>
-
-      <div class="bubbles" id="bubbles" aria-hidden="true"></div>
-
-      <!-- Tap-to-start overlay (only appears if autoplay is blocked) -->
-      <button id="tapToStart" class="tapToStart" type="button" hidden>
-        Click once to start audio
+      <button class="btn" id="themeToggle" type="button" aria-pressed="false" title="Toggle theme">
+        Theme change
       </button>
 
-      <footer class="footer">
-        <span>© 2026 EchoingTide1822 — James Gill</span>
-      </footer>
+      <button class="btn" id="trailToggle" type="button" aria-pressed="false" title="Toggle mouse trail">
+        Mouse Trail
+      </button>
+
+      <div class="audioCtl" title="Audio">
+        <label for="vol" class="audioLabel">Volume</label>
+        <input id="vol" type="range" min="0" max="1" step="0.01" value="0.25" title="Adjust volume" />
+        <button class="btn" id="playBtn" type="button">Play</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero" aria-label="Hero">
+    <div class="heroInner">
+      <div class="heroTitle">RELIABLE SOFTWARE. HUMAN-FIRST DESIGN</div>
+      <div class="heroSub">Cloud • Software • Human-Centered Design</div>
+      <div class="scrollHint">Scroll ↓</div>
+      <div class="soundHint" id="soundHint" hidden>Click / tap once to enable sound.</div>
+    </div>
+  </section>
+
+  <!-- Scrollytelling area -->
+  <main id="scrollArea">
+    <section class="stage" aria-label="Scrollytelling stage">
+      <div id="bubbles" aria-hidden="true"></div>
+      <div id="trail" aria-hidden="true"></div>
+
+      <!-- Hidden hotspot to open media vault (tiny, bottom-right) -->
+      <button id="vaultHotspot" type="button" aria-label="Open media check"></button>
     </section>
 
-    <!-- Spacer creates scroll distance -->
-    <div class="spacer" id="spacer" aria-hidden="true"></div>
-
-    <!-- Fallback content (if GSAP fails / JS disabled) -->
-    <section class="fallback" id="fallback">
-      <h2>Career Lifeline</h2>
-      <p>This page is designed for scroll animation. If you can’t see the motion, your browser may be blocking scripts.</p>
-      <ul id="fallbackList"></ul>
-    </section>
+    <!-- Gives the page actual scroll length -->
+    <div id="spacer"></div>
   </main>
 
-  <!-- Audio (autoplay may be blocked until user interaction) -->
-  <audio id="bgm" preload="auto" loop src="./I,%20am...me.mp3"></audio>
+  <footer class="footer">
+    <span>© 2026 EchoingTide1822 — James Gill</span>
+  </footer>
 
-  <!-- Video vault (opened by the hidden hotspot) -->
-  <div id="vault" class="vault" hidden>
-    <div class="vaultCard" role="dialog" aria-modal="true" aria-label="Screensavers">
-      <div class="vaultHead">
-        <strong>Screensavers</strong>
-        <button id="vaultClose" class="btn" type="button">Close</button>
+  <!-- Audio -->
+  <audio id="bgm" preload="auto" loop>
+    <!-- IMPORTANT: file must be exactly named and in repo root -->
+    <source src="./I,%20am...me.mp3" type="audio/mpeg" />
+  </audio>
+
+  <!-- Media Check Modal -->
+  <div class="modal" id="vaultModal" aria-hidden="true">
+    <div class="modalCard" role="dialog" aria-modal="true" aria-label="Media Check">
+      <div class="modalHeader">
+        <div>
+          <div class="modalTitle">Media Check</div>
+          <div class="modalSub">This panel is just to verify your videos are reachable on GitHub Pages.</div>
+        </div>
+        <button class="btn" id="vaultClose" type="button">Close</button>
       </div>
 
-      <video id="vaultVideo" class="vaultVideo" controls playsinline></video>
-
-      <div class="vaultRow">
-        <button id="prevVid" class="btn" type="button">Prev</button>
-        <button id="nextVid" class="btn" type="button">Next</button>
-        <span class="vaultMeta" id="vaultMeta"></span>
+      <div class="grid">
+        <video class="vid" src="./Screensaver-1.mp4" muted loop playsinline controls></video>
+        <video class="vid" src="./Screensaver-4.mp4" muted loop playsinline controls></video>
+        <video class="vid" src="./Screensaver-5.mp4" muted loop playsinline controls></video>
+        <video class="vid" src="./Alien-Beach-Waves.mp4" muted loop playsinline controls></video>
       </div>
-      <p class="vaultTip">Tip: press <kbd>V</kbd> to open/close this.</p>
+
+      <div class="modalTip">
+        Tip: press <kbd>V</kbd> anytime to open/close this panel.
+      </div>
     </div>
   </div>
 
   <!-- GSAP + ScrollTrigger -->
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
-  <script defer src="./app.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
