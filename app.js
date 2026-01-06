@@ -1,392 +1,438 @@
 /* global gsap, ScrollTrigger */
+gsap.registerPlugin(ScrollTrigger);
 
-(function () {
-  // --- Safety check
-  if (!window.gsap || !window.ScrollTrigger) {
-    console.warn("GSAP / ScrollTrigger not loaded.");
+/* -----------------------------
+   1) Background sequence
+-------------------------------- */
+const bgImages = [
+  "AirForce_Emblem.png",
+  "CADdets_Retro.png",
+  "CADdets_1.png",
+  "Tech_Career.png",
+];
+
+const bgEls = [
+  document.getElementById("bg1"),
+  document.getElementById("bg2"),
+  document.getElementById("bg3"),
+  document.getElementById("bg4"),
+];
+
+bgEls.forEach((el, i) => (el.src = `./${bgImages[i]}`));
+bgEls[0].style.opacity = 1;
+
+/* -----------------------------
+   2) Beats (your “cards”)
+   - First 12 are your images.
+   - Then we sprinkle in text beats
+     to keep “Career Lifeline” loud.
+-------------------------------- */
+const beats = [
+  // Option A image beats
+  { type: "image", src: "1_Website.png", alt: "Beat 1" },
+  { type: "image", src: "2_Website.png", alt: "Beat 2" },
+  { type: "image", src: "3_Website.png", alt: "Beat 3" },
+  { type: "image", src: "4_Website.png", alt: "Beat 4" },
+  { type: "image", src: "5_Website.png", alt: "Beat 5" },
+  { type: "image", src: "6_Website.png", alt: "Beat 6" },
+  { type: "image", src: "7_Website.png", alt: "Beat 7" },
+  { type: "image", src: "8_Website.png", alt: "Beat 8" },
+  { type: "image", src: "9_Website.png", alt: "Beat 9" },
+  { type: "image", src: "10_Website.png", alt: "Beat 10" },
+  { type: "image", src: "11_Website.png", alt: "Beat 11" },
+  { type: "image", src: "12_Website.png", alt: "Beat 12" },
+
+  // Career Lifeline “sprinkle”
+  {
+    type: "text",
+    title: "20 years U.S. Air Force leadership.",
+    sub: "Mission ops taught me calm execution under pressure.",
+  },
+  {
+    type: "text",
+    title: "Led large-scale inspections and programs.",
+    sub: "150 sites • 17,643 personnel • $361M scope",
+  },
+  {
+    type: "text",
+    title: "Managed projects and budgets.",
+    sub: "$4.6M across 55 locations • systems and standards",
+  },
+  {
+    type: "text",
+    title: "Operational reliability mindset.",
+    sub: "Airfield recovery operations protecting $1.2B in assets",
+  },
+  {
+    type: "text",
+    title: "Now building in C# / .NET + cloud.",
+    sub: "Strong fundamentals • modern patterns • ship in increments",
+  },
+  {
+    type: "text",
+    title: "Houston-bound.",
+    sub: "Looking for a team that values integrity, growth, and impact.",
+  },
+  {
+    type: "text",
+    title: "Let’s build something dependable.",
+    sub: "Reliable software. Human-first design.",
+  },
+];
+
+/* -----------------------------
+   3) Create cards
+-------------------------------- */
+const cardsHost = document.getElementById("cards");
+
+const anchors = beats.map(() => ({
+  x: gsap.utils.random(-120, 120),
+  y: gsap.utils.random(-90, 90),
+  r: gsap.utils.random(-6, 6),
+  rx: gsap.utils.random(-4, 4),
+}));
+
+const cards = beats.map((b, i) => {
+  const card = document.createElement("div");
+  card.className = "card";
+  card.dataset.index = String(i);
+
+  const inner = document.createElement("div");
+  inner.className = "cardInner";
+
+  if (b.type === "image") {
+    const img = document.createElement("img");
+    img.loading = "eager";
+    img.alt = b.alt || `Beat ${i + 1}`;
+    img.src = `./${b.src}`;
+    inner.appendChild(img);
+  } else {
+    const wrap = document.createElement("div");
+    wrap.className = "cardText";
+
+    const title = document.createElement("div");
+    title.className = "title";
+    title.textContent = b.title;
+
+    const sub = document.createElement("div");
+    sub.className = "sub";
+    sub.textContent = b.sub || "";
+
+    wrap.appendChild(title);
+    wrap.appendChild(sub);
+    inner.appendChild(wrap);
+  }
+
+  card.appendChild(inner);
+  cardsHost.appendChild(card);
+
+  // subtle floating animation on inner (does not fight scroll transforms)
+  gsap.to(inner, {
+    y: gsap.utils.random(-10, 10),
+    duration: gsap.utils.random(2.8, 4.6),
+    repeat: -1,
+    yoyo: true,
+    ease: "sine.inOut",
+    delay: gsap.utils.random(0, 1.2),
+  });
+
+  return card;
+});
+
+/* -----------------------------
+   4) ScrollTrigger engine
+   Goal: ~7 visible cards at once.
+-------------------------------- */
+const hero = document.getElementById("hero");
+const scrollSpacer = document.getElementById("scrollSpacer");
+
+const total = beats.length;
+
+// Give enough scroll distance for smooth cinematic motion
+const scrollLen = Math.max(7000, total * 1200);
+scrollSpacer.style.height = `${scrollLen}px`;
+
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function updateBackground(progress) {
+  // progress maps across 4 backgrounds, last stays.
+  const t = progress * (bgImages.length - 1);
+  const i = Math.floor(t);
+  const f = t - i;
+
+  bgEls.forEach((el, idx) => (el.style.opacity = 0));
+
+  const a = clamp(i, 0, bgEls.length - 1);
+  const b = clamp(i + 1, 0, bgEls.length - 1);
+
+  if (a === bgEls.length - 1) {
+    bgEls[a].style.opacity = 1;
     return;
   }
-  gsap.registerPlugin(ScrollTrigger);
 
-  // --- Elements
-  const bubblesRoot = document.getElementById("bubbles");
-  const spacer = document.getElementById("spacer");
-  const stage = document.querySelector(".stage");
+  bgEls[a].style.opacity = String(1 - f);
+  bgEls[b].style.opacity = String(f);
+}
 
-  const bgLayers = [
-    document.getElementById("bg1"),
-    document.getElementById("bg2"),
-    document.getElementById("bg3"),
-    document.getElementById("bg4"),
-  ];
+function updateCards(progress) {
+  // “t” is fractional index so motion is smooth between beats
+  const t = progress * (total - 1);
 
-  const themeToggle = document.getElementById("themeToggle");
-  const trailToggle = document.getElementById("trailToggle");
+  // Hero fades fast once scrolling begins
+  const heroAlpha = clamp(1 - progress * 5, 0, 1);
+  gsap.set(hero, { autoAlpha: heroAlpha });
 
-  const bgm = document.getElementById("bgm");
-  const vol = document.getElementById("vol");
-  const playBtn = document.getElementById("playBtn");
-  const soundHint = document.getElementById("soundHint");
+  for (let i = 0; i < cards.length; i++) {
+    const card = cards[i];
+    const a = anchors[i];
 
-  const vaultHotspot = document.getElementById("vaultHotspot");
-  const vaultModal = document.getElementById("vaultModal");
-  const vaultClose = document.getElementById("vaultClose");
+    const d = i - t;               // float distance from “active”
+    const ad = Math.abs(d);
 
-  // --- Your “beats” (mix images + text)
-  // NOTE: Add/remove items here. Images must exist in repo root.
-  const beats = [
-    // Image replacements you created:
-    { type: "image", src: "./1_Website.png" },
-    { type: "image", src: "./2_Website.png" },
-    { type: "image", src: "./3_Website.png" },
-    { type: "image", src: "./4_Website.png" },
-    { type: "image", src: "./5_Website.png" },
-    { type: "image", src: "./6_Website.png" },
-    { type: "image", src: "./7_Website.png" },
-    { type: "image", src: "./8_Website.png" },
-    { type: "image", src: "./9_Website.png" },
-    { type: "image", src: "./10_Website.png" },
+    // show ~7 cards at once (dist <= ~3.2)
+    const visible = ad <= 3.2;
 
-    // Sprinkle in “Career Lifeline” truth-bombs (resume-based)
-    { type: "text", title: "20 years U.S. Air Force.", sub: "Mission systems. High-stakes ops. Calm execution." },
-    { type: "text", title: "Led teams across 55+ locations.", sub: "Training, safety, inspections, and operational control." },
-    { type: "text", title: "$258M in assets. $4.6M in projects.", sub: "Accountability, planning, delivery." },
-    { type: "text", title: "Designed a Job Safety Program.", sub: "Built for 2,500 people. Real-world risk reduction." },
-    { type: "text", title: "BA — Organizational Management (Summa Cum Laude).", sub: "Plus AAS in Mechanical/Electrical Technology." },
-
-    // More cinematic lines (keep these as text bubbles)
-    { type: "text", title: "Build it clean.", sub: "Keep it maintainable." },
-    { type: "text", title: "Cloud-minded by default.", sub: "Logs, monitoring, failure modes." },
-    { type: "text", title: "APIs that behave.", sub: "Clear contracts, validation, predictable errors." },
-    { type: "text", title: "Bugs are just clues.", sub: "Trace. Isolate. Fix. Prevent." },
-    { type: "text", title: "Human-centered systems.", sub: "Built for real people." },
-    { type: "text", title: "Clarity beats clever.", sub: "Every time." },
-    { type: "text", title: "Accessibility isn’t optional.", sub: "Contrast. Structure. Keyboard sanity." },
-
-    { type: "text", title: "Let’s build something dependable.", sub: "Real apps. Real commits. Real lessons." },
-
-    // If you add 11/12 later, they’ll render automatically if files exist:
-    { type: "image", src: "./11_Website.png" },
-    { type: "image", src: "./12_Website.png" },
-  ];
-
-  // --- Utility
-  const vw = (n) => (window.innerWidth * n) / 100;
-  const vh = (n) => (window.innerHeight * n) / 100;
-
-  // Lane positions around center (Luma-ish scatter)
-  // x/y are offsets from center in px (computed via vw/vh each time)
-  const lanes = [
-    () => ({ x: 0,         y: 0,         s: 1.12 }),
-    () => ({ x: -vw(28),   y: -vh(12),   s: 0.92 }),
-    () => ({ x: vw(28),    y: -vh(10),   s: 0.92 }),
-    () => ({ x: -vw(34),   y: vh(16),    s: 0.88 }),
-    () => ({ x: vw(34),    y: vh(16),    s: 0.88 }),
-    () => ({ x: -vw(8),    y: -vh(26),   s: 0.82 }),
-    () => ({ x: vw(10),    y: -vh(26),   s: 0.82 }),
-    () => ({ x: -vw(12),   y: vh(28),    s: 0.82 }),
-    () => ({ x: vw(12),    y: vh(28),    s: 0.82 }),
-  ];
-
-  // --- Preload images so they don't “pop” mid-scroll
-  function preload() {
-    const srcs = new Set([
-      "./AirForce_Emblem.png",
-      "./CADdets_Retro.png",
-      "./CADdets_1.png",
-      "./Tech_Career.png",
-      ...beats.filter(b => b.type === "image").map(b => b.src),
-    ]);
-
-    srcs.forEach((src) => {
-      const img = new Image();
-      img.src = src;
-    });
-  }
-
-  // --- Render bubbles
-  function createBubble(beat) {
-    const el = document.createElement("div");
-    el.className = "bubble " + (beat.type === "image" ? "image" : "text");
-
-    if (beat.type === "image") {
-      const img = document.createElement("img");
-      img.loading = "eager";
-      img.decoding = "async";
-      img.src = beat.src;
-      img.alt = "";
-      el.appendChild(img);
-    } else {
-      const t = document.createElement("div");
-      t.className = "bubbleTitle";
-      t.textContent = beat.title;
-
-      const s = document.createElement("div");
-      s.className = "bubbleSub";
-      s.textContent = beat.sub || "";
-
-      el.appendChild(t);
-      el.appendChild(s);
+    if (!visible) {
+      gsap.set(card, { autoAlpha: 0 });
+      continue;
     }
 
-    bubblesRoot.appendChild(el);
-    return el;
-  }
+    const dir = d === 0 ? 0 : (d > 0 ? 1 : -1);
 
-  // --- Background crossfade timeline (1→2→3→4 then hold)
-  function makeBgTimeline() {
-    // Start with first bg visible
-    gsap.set(bgLayers, { autoAlpha: 0 });
-    gsap.set(bgLayers[0], { autoAlpha: 1 });
+    // Cinematic path:
+    // - upcoming cards are “behind” camera
+    // - passed cards move forward “past” the camera
+    let z = 320 - ad * 320;
+    if (d < 0) z += (-d) * 520; // passed = fly forward
 
-    const tl = gsap.timeline({ defaults: { ease: "none" } });
+    const spreadX = 260 + ad * 220;
+    const spreadY = 40 + ad * 140;
 
-    // Each crossfade takes 1 unit
-    tl.to(bgLayers[0], { autoAlpha: 0 }, 1);
-    tl.to(bgLayers[1], { autoAlpha: 1 }, 1);
+    const x = dir * spreadX + a.x;
+    const y =
+      (d > 0 ? -spreadY : spreadY * 0.25) + a.y;
 
-    tl.to(bgLayers[1], { autoAlpha: 0 }, 2);
-    tl.to(bgLayers[2], { autoAlpha: 1 }, 2);
+    let scale = 1.06 - ad * 0.18;
+    scale = clamp(scale, 0.42, 1.08);
 
-    tl.to(bgLayers[2], { autoAlpha: 0 }, 3);
-    tl.to(bgLayers[3], { autoAlpha: 1 }, 3);
+    let alpha = 1 - ad * 0.33;
+    alpha = clamp(alpha, 0, 1);
 
-    // Hold last
-    tl.to({}, { duration: 1 }, 4);
-
-    return tl;
-  }
-
-  // --- Luma-style overlapping bubble animation
-  function makeBubblesTimeline(bubbleEls) {
-    const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
-
-    // These two numbers are the whole “5–7 bubbles visible” trick:
-    const spacing = 0.55;   // new beat starts every 0.55 units
-    const lifetime = 3.3;   // each beat stays alive ~3.3 units
-    // visible count ≈ lifetime/spacing => 3.3/0.55 = 6 bubbles on average ✅
-
-    bubbleEls.forEach((el, i) => {
-      const lane = lanes[i % lanes.length]();
-
-      // small drift so they “flow past”
-      const driftX = (Math.random() - 0.5) * vw(14);
-      const driftY = (Math.random() - 0.5) * vh(10);
-
-      const t0 = i * spacing;
-
-      // start slightly smaller + offset, fade in
-      gsap.set(el, {
-        x: lane.x + driftX * 0.35,
-        y: lane.y + driftY * 0.35,
-        scale: lane.s * 0.88,
-        autoAlpha: 0,
-      });
-
-      // fade in & sharpen
-      tl.to(el, {
-        autoAlpha: 1,
-        scale: lane.s,
-        duration: 0.35,
-      }, t0);
-
-      // glide across its lane while alive
-      tl.to(el, {
-        x: lane.x + driftX,
-        y: lane.y + driftY,
-        duration: lifetime,
-        ease: "none"
-      }, t0);
-
-      // fade out near the end (so reverse scroll looks good too)
-      tl.to(el, {
-        autoAlpha: 0,
-        scale: lane.s * 0.92,
-        duration: 0.35,
-        ease: "power2.in"
-      }, t0 + lifetime - 0.35);
-    });
-
-    // total duration needed
-    const total = (bubbleEls.length - 1) * 0.55 + 3.3;
-    tl.to({}, { duration: 0.01 }, total);
-
-    return tl;
-  }
-
-  // --- ScrollTrigger wiring
-  function setupScroll(bgTl, bubbleTl) {
-    // Make page scroll length proportional to beats
-    // (Big enough to feel cinematic, not tiny-janky)
-    const vhPerBeat = 55; // adjust if you want longer/shorter
-    spacer.style.height = `${Math.max(800, beats.length * vhPerBeat)}vh`;
-
-    // Master timeline, driven by scroll progress
-    const master = gsap.timeline();
-    master.add(bgTl, 0);
-    master.add(bubbleTl, 0);
-
-    ScrollTrigger.create({
-      trigger: "#scrollArea",
-      start: "top top",
-      end: "bottom bottom",
-      scrub: 1,
-      pin: ".stage",
-      anticipatePin: 1,
-      animation: master,
-    });
-  }
-
-  // --- Audio (real autoplay is blocked; we “arm” it on first interaction)
-  let audioArmed = false;
-
-  function tryStartAudio() {
-    if (audioArmed) return;
-
-    audioArmed = true;
-    soundHint.hidden = true;
-
-    bgm.volume = parseFloat(vol.value || "0.25");
-
-    const p = bgm.play();
-    if (p && typeof p.catch === "function") {
-      p.catch(() => {
-        // If still blocked, un-arm so the next gesture can try again
-        audioArmed = false;
-        soundHint.hidden = false;
-      });
-    }
-  }
-
-  function setupAudio() {
-    vol.addEventListener("input", () => {
-      bgm.volume = parseFloat(vol.value || "0.25");
-    });
-
-    playBtn.addEventListener("click", async () => {
-      tryStartAudio();
-      // if already playing, toggle pause/play
-      if (!bgm.paused) {
-        bgm.pause();
-        playBtn.textContent = "Play";
-      } else {
-        await bgm.play().catch(() => {});
-        playBtn.textContent = "Pause";
-      }
-    });
-
-    // Show hint until first successful start
-    soundHint.hidden = false;
-
-    // First user gesture triggers audio (click/tap/keydown)
-    const armEvents = ["pointerdown", "keydown", "touchstart"];
-    armEvents.forEach((ev) => window.addEventListener(ev, tryStartAudio, { once: true, passive: true }));
-  }
-
-  // --- Theme toggle
-  function setupTheme() {
-    themeToggle.addEventListener("click", () => {
-      const on = document.body.classList.toggle("alt");
-      themeToggle.setAttribute("aria-pressed", on ? "true" : "false");
-    });
-  }
-
-  // --- Mouse trail
-  let trailOn = false;
-  const trail = document.getElementById("trail");
-  const dots = [];
-  function setupTrail() {
-    // build dots
-    for (let i = 0; i < 18; i++) {
-      const d = document.createElement("div");
-      d.className = "trDot";
-      trail.appendChild(d);
-      dots.push({ el: d, x: 0, y: 0, a: 0 });
+    // fade quickly after passing
+    if (d < -0.6) {
+      alpha *= clamp(1 - (-d - 0.6) * 0.85, 0, 1);
     }
 
-    let mx = window.innerWidth / 2;
-    let my = window.innerHeight / 2;
+    const rotY = (-dir * (10 + ad * 7)) + a.r;
+    const rotX = (d > 0 ? 5 : -5) + a.rx;
 
-    window.addEventListener("pointermove", (e) => {
-      mx = e.clientX;
-      my = e.clientY;
-    }, { passive: true });
+    // Higher zIndex for near cards
+    const zIndex = String(1000 - Math.floor(ad * 120));
 
-    gsap.ticker.add(() => {
+    gsap.set(card, {
+      xPercent: -50,
+      yPercent: -50,
+      x,
+      y,
+      z,
+      rotationY: rotY,
+      rotationX: rotX,
+      scale,
+      autoAlpha: alpha,
+      zIndex,
+      transformPerspective: 1200,
+      transformStyle: "preserve-3d",
+    });
+  }
+}
+
+ScrollTrigger.create({
+  trigger: scrollSpacer,
+  start: "top top",
+  end: "bottom bottom",
+  pin: "#stage",
+  scrub: true,
+  onUpdate: (self) => {
+    updateBackground(self.progress);
+    updateCards(self.progress);
+  },
+});
+
+/* Initialize first frame */
+updateBackground(0);
+updateCards(0);
+
+/* -----------------------------
+   5) Audio (autoplay reality check)
+   Browsers often block autoplay with sound.
+   We try immediately, then again on first user interaction.
+-------------------------------- */
+const bgm = document.getElementById("bgm");
+const playBtn = document.getElementById("playBtn");
+const vol = document.getElementById("vol");
+
+bgm.volume = Number(vol.value || 0.35);
+
+function setPlayLabel() {
+  playBtn.textContent = bgm.paused ? "Play" : "Pause";
+}
+
+async function tryPlayAudio() {
+  try {
+    await bgm.play();
+  } catch {
+    // blocked until user interacts — that’s normal
+  } finally {
+    setPlayLabel();
+  }
+}
+
+vol.addEventListener("input", () => {
+  bgm.volume = Number(vol.value);
+});
+
+playBtn.addEventListener("click", async () => {
+  if (bgm.paused) await tryPlayAudio();
+  else bgm.pause();
+  setPlayLabel();
+});
+
+// Attempt on load
+tryPlayAudio();
+
+// Try again on first real interaction (scroll/click/key)
+const unlock = async () => {
+  await tryPlayAudio();
+  window.removeEventListener("pointerdown", unlock);
+  window.removeEventListener("keydown", unlock);
+  window.removeEventListener("wheel", unlock);
+};
+window.addEventListener("pointerdown", unlock, { once: true });
+window.addEventListener("keydown", unlock, { once: true });
+window.addEventListener("wheel", unlock, { once: true });
+
+/* -----------------------------
+   6) Theme + Mouse Trail (simple)
+-------------------------------- */
+const themeBtn = document.getElementById("themeBtn");
+const trailBtn = document.getElementById("trailBtn");
+
+themeBtn.addEventListener("click", () => {
+  const on = themeBtn.getAttribute("aria-pressed") === "true";
+  themeBtn.setAttribute("aria-pressed", String(!on));
+  // optional: you can swap CSS variables here later if you want a true light theme
+});
+
+let trailOn = false;
+let trailDot = null;
+
+trailBtn.addEventListener("click", () => {
+  trailOn = !trailOn;
+  trailBtn.setAttribute("aria-pressed", String(trailOn));
+
+  if (trailOn && !trailDot) {
+    trailDot = document.createElement("div");
+    trailDot.style.position = "fixed";
+    trailDot.style.width = "10px";
+    trailDot.style.height = "10px";
+    trailDot.style.borderRadius = "999px";
+    trailDot.style.pointerEvents = "none";
+    trailDot.style.zIndex = "9999";
+    trailDot.style.background = "rgba(0, 220, 255, 0.65)";
+    trailDot.style.boxShadow = "0 0 30px rgba(0, 220, 255, 0.35)";
+    document.body.appendChild(trailDot);
+
+    window.addEventListener("mousemove", (e) => {
       if (!trailOn) return;
-
-      let x = mx, y = my;
-      dots.forEach((d, i) => {
-        d.x += (x - d.x) * (0.18 - i * 0.006);
-        d.y += (y - d.y) * (0.18 - i * 0.006);
-        x = d.x; y = d.y;
-
-        d.a = Math.max(0, 1 - i / dots.length);
-        d.el.style.transform = `translate(${d.x}px, ${d.y}px)`;
-        d.el.style.opacity = String(d.a);
-      });
-    });
-
-    trailToggle.addEventListener("click", () => {
-      trailOn = !trailOn;
-      trailToggle.setAttribute("aria-pressed", trailOn ? "true" : "false");
-      if (!trailOn) dots.forEach(d => (d.el.style.opacity = "0"));
+      trailDot.style.left = `${e.clientX - 5}px`;
+      trailDot.style.top = `${e.clientY - 5}px`;
     });
   }
 
-  // --- Vault modal
-  function setVault(open) {
-    vaultModal.setAttribute("aria-hidden", open ? "false" : "true");
-    if (open) {
-      // Try to play previews (muted is allowed)
-      vaultModal.querySelectorAll("video").forEach(v => {
-        v.play().catch(() => {});
-      });
-    }
+  if (!trailOn && trailDot) {
+    trailDot.style.opacity = "0";
   }
-  function setupVault() {
-    vaultHotspot.addEventListener("click", () => setVault(true));
-    vaultClose.addEventListener("click", () => setVault(false));
-    window.addEventListener("keydown", (e) => {
-      if (e.key.toLowerCase() === "v") {
-        const isOpen = vaultModal.getAttribute("aria-hidden") === "false";
-        setVault(!isOpen);
+  if (trailOn && trailDot) {
+    trailDot.style.opacity = "1";
+  }
+});
+
+/* -----------------------------
+   7) Screensavers modal
+-------------------------------- */
+const modal = document.getElementById("vaultModal");
+const screensaverBtn = document.getElementById("screensaverBtn");
+const closeModalBtn = document.getElementById("closeModalBtn");
+const prevVidBtn = document.getElementById("prevVidBtn");
+const nextVidBtn = document.getElementById("nextVidBtn");
+const ssVideo = document.getElementById("ssVideo");
+const vidMeta = document.getElementById("vidMeta");
+
+// Candidate list (supports your rename)
+const candidateVideos = [
+  "Screensaver-1.mp4",
+  "Screensaver-4.mp4",
+  "Alien-Beach-Waves.mp4", // your renamed file
+  // If you later add more, just list them here.
+];
+
+let videos = [];
+let vidIndex = 0;
+
+async function buildVideoList() {
+  // Filter out missing files so you don’t get “format/MIME not found” panels.
+  const checks = await Promise.all(
+    candidateVideos.map(async (name) => {
+      try {
+        const res = await fetch(`./${name}`, { method: "GET" });
+        if (!res.ok) return null;
+        return name;
+      } catch {
+        return null;
       }
-      if (e.key === "Escape") setVault(false);
-    });
-    vaultModal.addEventListener("click", (e) => {
-      if (e.target === vaultModal) setVault(false);
-    });
+    })
+  );
+  videos = checks.filter(Boolean);
+  if (videos.length === 0) {
+    videos = []; // none found
   }
+}
 
-  // --- Init
-  function init() {
-    preload();
-
-    // Create bubbles
-    bubblesRoot.innerHTML = "";
-    const bubbleEls = beats.map(createBubble);
-
-    // Timelines
-    const bgTl = makeBgTimeline();
-    const bubbleTl = makeBubblesTimeline(bubbleEls);
-
-    // ScrollTrigger wiring
-    setupScroll(bgTl, bubbleTl);
-
-    // UI
-    setupAudio();
-    setupTheme();
-    setupTrail();
-    setupVault();
-
-    // Refresh on resize to keep lanes correct
-    let rAF = null;
-    window.addEventListener("resize", () => {
-      cancelAnimationFrame(rAF);
-      rAF = requestAnimationFrame(() => ScrollTrigger.refresh());
-    });
+function showVideo(i) {
+  if (!videos.length) {
+    ssVideo.removeAttribute("src");
+    vidMeta.textContent = "No screensaver videos found in folder.";
+    return;
   }
+  vidIndex = (i + videos.length) % videos.length;
+  const name = videos[vidIndex];
+  ssVideo.src = `./${name}`;
+  ssVideo.play().catch(() => {});
+  vidMeta.textContent = `${name} (${vidIndex + 1}/${videos.length})`;
+}
 
-  init();
-})();
+function openModal() {
+  modal.classList.add("show");
+  modal.setAttribute("aria-hidden", "false");
+  buildVideoList().then(() => showVideo(vidIndex));
+}
+
+function closeModal() {
+  modal.classList.remove("show");
+  modal.setAttribute("aria-hidden", "true");
+  ssVideo.pause();
+}
+
+screensaverBtn.addEventListener("click", openModal);
+closeModalBtn.addEventListener("click", closeModal);
+prevVidBtn.addEventListener("click", () => showVideo(vidIndex - 1));
+nextVidBtn.addEventListener("click", () => showVideo(vidIndex + 1));
+
+window.addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() === "v") {
+    if (modal.classList.contains("show")) closeModal();
+    else openModal();
+  }
+});

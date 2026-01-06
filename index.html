@@ -1,111 +1,84 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Career Lifeline — James Gill</title>
-
-  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
   <!-- Background stack -->
-  <div class="bg" aria-hidden="true">
-    <img class="bg-layer" id="bg1" src="./AirForce_Emblem.png" alt="" />
-    <img class="bg-layer" id="bg2" src="./CADdets_Retro.png" alt="" />
-    <img class="bg-layer" id="bg3" src="./CADdets_1.png" alt="" />
-    <img class="bg-layer" id="bg4" src="./Tech_Career.png" alt="" />
-    <div class="bg-overlay"></div>
+  <div id="bg">
+    <img id="bg1" alt="" />
+    <img id="bg2" alt="" />
+    <img id="bg3" alt="" />
+    <img id="bg4" alt="" />
+    <div id="bgOverlay"></div>
   </div>
 
-  <!-- Top UI -->
-  <header class="topbar">
-    <div class="brand">
-      <h1>Career Lifeline — James Gill</h1>
-      <p class="tagline">Empowering tech to serve the mission. From Mission-ops to DevOps.</p>
-    </div>
-
-    <div class="controls">
+  <!-- UI -->
+  <header class="controls" aria-label="Site controls">
+    <div class="controlsRow">
       <a class="btn" href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer">Connect on LinkedIn</a>
 
-      <button class="btn" id="themeToggle" type="button" aria-pressed="false" title="Toggle theme">
-        Theme change
-      </button>
+      <button class="btn" id="themeBtn" type="button" aria-pressed="false">Theme</button>
+      <button class="btn" id="trailBtn" type="button" aria-pressed="false">Mouse Trail</button>
 
-      <button class="btn" id="trailToggle" type="button" aria-pressed="false" title="Toggle mouse trail">
-        Mouse Trail
-      </button>
+      <button class="btn" id="screensaverBtn" type="button" title="Screensavers (V)">Screensavers</button>
+    </div>
 
-      <div class="audioCtl" title="Audio">
-        <label for="vol" class="audioLabel">Volume</label>
-        <input id="vol" type="range" min="0" max="1" step="0.01" value="0.25" title="Adjust volume" />
-        <button class="btn" id="playBtn" type="button">Play</button>
-      </div>
+    <div class="audioRow">
+      <label class="label" for="vol">Volume</label>
+      <input id="vol" type="range" min="0" max="1" step="0.01" value="0.35" />
+      <button class="btn" id="playBtn" type="button">Play</button>
     </div>
   </header>
 
-  <!-- Hero -->
-  <section class="hero" aria-label="Hero">
-    <div class="heroInner">
-      <div class="heroTitle">RELIABLE SOFTWARE. HUMAN-FIRST DESIGN</div>
-      <div class="heroSub">Cloud • Software • Human-Centered Design</div>
-      <div class="scrollHint">Scroll ↓</div>
-      <div class="soundHint" id="soundHint" hidden>Click / tap once to enable sound.</div>
-    </div>
-  </section>
+  <!-- Audio (UPDATED filename) -->
+  <audio id="bgm" preload="auto" loop src="./I_am...me.mp3"></audio>
 
-  <!-- Scrollytelling area -->
-  <main id="scrollArea">
-    <section class="stage" aria-label="Scrollytelling stage">
-      <div id="bubbles" aria-hidden="true"></div>
-      <div id="trail" aria-hidden="true"></div>
-
-      <!-- Hidden hotspot to open media vault (tiny, bottom-right) -->
-      <button id="vaultHotspot" type="button" aria-label="Open media check"></button>
+  <!-- Stage (pinned by ScrollTrigger) -->
+  <main id="stage" aria-label="Career Lifeline scrollytelling stage">
+    <section id="hero" aria-label="Hero">
+      <h1>RELIABLE SOFTWARE. HUMAN-FIRST DESIGN.</h1>
+      <p class="sub">Cloud • Software • Human-Centered Design</p>
+      <p class="hint">Scroll ↓</p>
     </section>
 
-    <!-- Gives the page actual scroll length -->
-    <div id="spacer"></div>
+    <div id="cards" aria-hidden="true"></div>
   </main>
 
-  <footer class="footer">
-    <span>© 2026 EchoingTide1822 — James Gill</span>
-  </footer>
+  <!-- Spacer that creates scroll distance -->
+  <div id="scrollSpacer" aria-hidden="true"></div>
 
-  <!-- Audio -->
-  <audio id="bgm" preload="auto" loop>
-    <!-- IMPORTANT: file must be exactly named and in repo root -->
-    <source src="./I,%20am...me.mp3" type="audio/mpeg" />
-  </audio>
-
-  <!-- Media Check Modal -->
+  <!-- Modal -->
   <div class="modal" id="vaultModal" aria-hidden="true">
-    <div class="modalCard" role="dialog" aria-modal="true" aria-label="Media Check">
+    <div class="modalCard" role="dialog" aria-modal="true" aria-label="Screensavers">
       <div class="modalHeader">
-        <div>
-          <div class="modalTitle">Media Check</div>
-          <div class="modalSub">This panel is just to verify your videos are reachable on GitHub Pages.</div>
-        </div>
-        <button class="btn" id="vaultClose" type="button">Close</button>
+        <div class="modalTitle">Screensavers</div>
+        <button class="btn" id="closeModalBtn" type="button">Close</button>
       </div>
 
-      <div class="grid">
-        <video class="vid" src="./Screensaver-1.mp4" muted loop playsinline controls></video>
-        <video class="vid" src="./Screensaver-4.mp4" muted loop playsinline controls></video>
-        <video class="vid" src="./Screensaver-5.mp4" muted loop playsinline controls></video>
-        <video class="vid" src="./Alien-Beach-Waves.mp4" muted loop playsinline controls></video>
+      <div class="modalBody">
+        <video id="ssVideo" controls playsinline preload="metadata"></video>
       </div>
 
-      <div class="modalTip">
-        Tip: press <kbd>V</kbd> anytime to open/close this panel.
+      <div class="modalFooter">
+        <button class="btn" id="prevVidBtn" type="button">Prev</button>
+        <div class="modalMeta" id="vidMeta">—</div>
+        <button class="btn" id="nextVidBtn" type="button">Next</button>
       </div>
+
+      <div class="modalTip">Tip: press <b>V</b> to open/close this.</div>
     </div>
   </div>
 
-  <!-- GSAP + ScrollTrigger -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <!-- GSAP -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
 
-  <script src="./app.js"></script>
+  <!-- Your app -->
+  <script defer src="app.js"></script>
 </body>
 </html>
