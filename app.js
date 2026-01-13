@@ -81,17 +81,14 @@
 
   // ---------- UI: Theme / Trail / Audio / Modal ----------
   const btnTheme = $("#btnTheme");
-  const btnTrail = $("#btnTrail");
   const btnAudio = $("#btnAudio");
   const vol = $("#vol");
   const audio = $("#bgAudio");
-  const trailDot = $("#trailDot");
   const secretCorner = $("#secretCorner");
   const mediaModal = $("#mediaModal");
   const btnCloseMedia = $("#btnCloseMedia");
   const mediaGrid = $("#mediaGrid");
 
-  let trailOn = true;
   let theme = "corporate"; // corporate | retro
   let audioReady = false;
 
@@ -118,12 +115,6 @@
     }
   }
 
-  function setTrail(on) {
-    trailOn = on;
-    btnTrail.setAttribute("aria-pressed", String(trailOn));
-    trailDot.style.display = trailOn ? "block" : "none";
-  }
-
   function openMedia() {
     mediaModal.setAttribute("aria-hidden", "false");
   }
@@ -148,12 +139,12 @@
 
   function toggleAudio() {
     if (!audio) return;
+    audio.muted = false; // Unmute on user interaction
     if (audio.paused) {
       audio.volume = parseFloat(vol.value || "0.65");
       audio.play().then(() => {
         btnAudio.textContent = "Pause";
       }).catch(() => {
-        // still blocked
         btnAudio.textContent = "Play";
       });
     } else {
@@ -161,14 +152,6 @@
       btnAudio.textContent = "Play";
     }
   }
-
-  // Mouse trail movement
-  let mx = -999, my = -999;
-  window.addEventListener("pointermove", (e) => {
-    mx = e.clientX; my = e.clientY;
-    if (!trailOn) return;
-    trailDot.style.transform = `translate(${mx - 5}px, ${my - 5}px)`;
-  });
 
   // Build the videos grid (muted autoplay is allowed)
   function buildVideoGrid() {
@@ -196,7 +179,6 @@
 
   // Buttons / shortcuts
   btnTheme.addEventListener("click", () => setTheme(theme === "corporate" ? "retro" : "corporate"));
-  btnTrail.addEventListener("click", () => setTrail(!trailOn));
   btnAudio.addEventListener("click", () => toggleAudio());
   vol.addEventListener("input", () => { if (audio) audio.volume = parseFloat(vol.value || "0.65"); });
 
@@ -209,7 +191,6 @@
   window.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
     if (k === "t") setTheme(theme === "corporate" ? "retro" : "corporate");
-    if (k === "m") setTrail(!trailOn);
     if (k === "p") toggleAudio();
     if (k === "v") {
       const open = mediaModal.getAttribute("aria-hidden") === "false";
@@ -367,7 +348,6 @@
   function init() {
     // Set initial UI
     setTheme(theme);
-    setTrail(true);
     buildVideoGrid();
 
     // Attempt autoplay (may be blocked)
