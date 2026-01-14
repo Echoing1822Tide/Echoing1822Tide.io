@@ -2,177 +2,358 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="color-scheme" content="dark light" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Career Lifeline — James Gill</title>
+  <meta name="description" content="USAF veteran transitioning into cloud & software development. Projects, experience, and a practical portfolio that proves it." />
+
+  <!-- Simple monogram favicon (no extra file needed) -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Crect width='96' height='96' rx='18' fill='%230b0f17'/%3E%3Ctext x='50%25' y='58%25' text-anchor='middle' font-family='Segoe UI,Arial' font-size='44' fill='%23a7fff3'%3EJG%3C/text%3E%3C/svg%3E" />
+
   <link rel="stylesheet" href="style.css" />
-  <script defer src="app.js"></script>
+  <script src="app.js" defer></script>
 </head>
 
 <body data-theme="night">
-  <!-- Ambient background -->
-  <div class="bg" aria-hidden="true"></div>
-  <div class="bg-vignette" aria-hidden="true"></div>
+  <a class="skip" href="#main">Skip to content</a>
 
-  <!-- 3D Scene (fixed) -->
-  <div id="scene" aria-hidden="true"></div>
+  <!-- Background video (muted autoplay is reliable) -->
+  <video id="bgVideo" class="bg-video" autoplay muted loop playsinline preload="metadata">
+    <source src="assets/video/Alien-Beach-Waves.mp4" type="video/mp4" />
+  </video>
+  <div class="bg-veil" aria-hidden="true"></div>
 
-  <!-- HUD -->
+  <!-- Background music (autoplay attempted; may be blocked by browser policy) -->
+  <audio id="bgAudio" preload="none" loop>
+    <source src="assets/audio/I_am_me.mp3" type="audio/mpeg" />
+  </audio>
+
+  <!-- Top HUD (centered) -->
   <header class="hud" role="banner">
-    <div class="hud-row">
-      <a class="hud-chip" id="btnLinkedIn" href="#" rel="noopener" target="_blank">Connect on LinkedIn</a>
+    <div class="hud-inner">
+      <div class="hud-row" role="group" aria-label="Site controls">
+        <a class="hud-chip" id="btnLinkedIn"
+           href="https://www.linkedin.com/in/james-e-gill"
+           rel="noopener"
+           target="_blank">
+          Connect on LinkedIn
+        </a>
 
-      <button class="hud-chip" id="btnTheme" type="button" title="Cycle theme">Theme</button>
-      <button class="hud-chip" id="btnTrail" type="button" title="Toggle mouse trail">Mouse Trail</button>
-      <button class="hud-chip" id="btnAutoScroll" type="button" title="Toggle auto-scroll">Auto Scroll</button>
+        <button class="hud-chip" id="btnTheme" type="button" aria-pressed="true">Theme</button>
 
-      <button class="hud-chip" id="btnAudio" type="button" title="Toggle music">Music</button>
+        <button class="hud-chip" id="btnAutoScroll" type="button" aria-pressed="true">
+          Auto Scroll: ON
+        </button>
 
-      <label class="hud-volume" title="Volume">
-        <span class="hud-volume-label">Vol</span>
-        <input id="vol" type="range" min="0" max="1" step="0.01" />
-      </label>
+        <button class="hud-chip" id="btnMusic" type="button" aria-pressed="true">
+          Music: ON
+        </button>
 
-      <span class="hud-hint" id="hudHint" aria-live="polite"></span>
+        <button class="hud-chip" id="btnTrack" type="button" title="Cycle music track">
+          Track: 1/4
+        </button>
+
+        <label class="hud-label" for="volRange">Vol</label>
+        <input id="volRange" class="hud-range" type="range"
+               min="0" max="1" step="0.01" value="0.20"
+               aria-label="Music volume" />
+
+        <button class="hud-chip" id="btnScreensavers" type="button">Screensavers</button>
+      </div>
+
+      <nav class="hud-nav" aria-label="Primary navigation">
+        <a class="nav-link" href="#about">About</a>
+        <a class="nav-link" href="#projects">Projects</a>
+        <a class="nav-link" href="#experience">Experience</a>
+        <a class="nav-link" href="#education">Education</a>
+        <a class="nav-link" href="#contact">Contact</a>
+      </nav>
     </div>
-
-    <nav class="hud-nav" aria-label="Page navigation">
-      <a class="hud-navlink" href="#about">About</a>
-      <a class="hud-navlink" href="#projects">Projects</a>
-      <a class="hud-navlink" href="#experience">Experience</a>
-      <a class="hud-navlink" href="#education">Education</a>
-      <a class="hud-navlink" href="#contact">Contact</a>
-    </nav>
   </header>
 
-  <!-- Hidden bottom-right hotspot (restored) -->
-  <button id="secretHotspot" type="button" aria-label="Hidden screensaver control"></button>
+  <div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Main scroll content -->
-  <main id="scrollRoot">
-    <section class="section hero" id="top">
+  <main id="main" class="page">
+    <section class="hero" aria-label="Intro">
       <div class="hero-inner">
-        <h1>Reliable Software. Human-First Design.</h1>
-        <p class="sub">
-          Cloud • Software • Human-Centered Design
+        <h1>I Turn Chaos Into Structure.</h1>
+        <p class="hero-sub">
+          USAF veteran transitioning into cloud & software development — focused on
+          building reliable systems with a human-first mindset.
         </p>
 
-        <p class="micro">
-          Scroll to fly through the lifeline. <span class="kbd">V</span> opens screensavers.
-        </p>
-
-        <div class="hero-actions">
-          <a class="btn" href="#projects">View Projects</a>
-          <a class="btn ghost" href="#about">Quick Intro</a>
+        <div class="hero-badges" aria-label="Quick highlights">
+          <span class="badge">Cloud App Dev (MSSA)</span>
+          <span class="badge">C# / .NET</span>
+          <span class="badge">WPF + Win32</span>
+          <span class="badge">Ops → Engineering</span>
         </div>
       </div>
     </section>
 
-    <!-- Spacer sections (the 3D bubbles live in the scene; these give us scroll length) -->
-    <section class="section spacer" aria-hidden="true"></section>
-    <section class="section spacer" aria-hidden="true"></section>
-    <section class="section spacer" aria-hidden="true"></section>
-    <section class="section spacer" aria-hidden="true"></section>
-
-    <!-- Clean bottom section -->
-    <section class="section final" id="about">
-      <div class="container">
+    <section id="about" class="section">
+      <div class="section-head">
         <h2>About</h2>
         <p>
-          I’m a mission-driven problem solver transitioning from 20 years of high-stakes operations into
-          cloud & software development—focused on building reliable systems with a human-first mindset.
+          I’m a mission-driven problem solver transitioning from 20 years of high-stakes operations
+          into cloud & software development — focused on building dependable systems, clean UX flows,
+          and predictable behavior when it matters.
         </p>
+      </div>
 
-        <div class="cards" id="projects">
-          <div class="card">
-            <h3>Personal Projects</h3>
-            <ul class="bullets">
-              <li><b>GazeShot v1.0 App (stable)</b> — Windows tray utility with multi-monitor awareness and voice-controlled screenshot capture using WPF, Win32 APIs, and speech recognition.</li>
-              <li><b>Battleship Web Game</b> — Browser-based Battleship using HTML/CSS/JS; turn-based logic, responsive design, local storage game state.</li>
-              <li><b>Gift Helper App</b> — C#/.NET gift recommendation tool with recipient preferences and simple database storage.</li>
-              <li><b>Bolt Master Game App</b> — Mobile physics puzzle game concept; Unity (or similar), app-store standards.</li>
-              <li><b>(True Free) AI Image Upscaler App</b> — Free upscaler using open-source AI models; on-device processing + friendly UI.</li>
-              <li><b>MSSA Training Tracker App</b> — Tracker for assignments/milestones with dashboards/reminders; C#, .NET MAUI (or similar), Azure storage.</li>
-            </ul>
+      <div class="grid-3">
+        <article class="card">
+          <h3>What I’m optimizing for</h3>
+          <ul>
+            <li>Clarity over cleverness</li>
+            <li>Simple UI that scales across devices</li>
+            <li>Projects that prove skill (not vibes)</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <h3>What you’ll see here</h3>
+          <ul>
+            <li>Personal projects with real constraints</li>
+            <li>Snapshots + links (GitHub / demos)</li>
+            <li>Short, readable sections (no wall-of-text)</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <h3>What I’m building next</h3>
+          <ul>
+            <li>More “case study” style project write-ups</li>
+            <li>Cleaner mobile layout + tap-friendly UI</li>
+            <li>Less clutter, more signal</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="projects" class="section">
+      <div class="section-head">
+        <h2>Projects</h2>
+        <p>
+          Here’s the stuff that proves I can ship. Each item is written like a recruiter will skim it
+          (because they will).
+        </p>
+      </div>
+
+      <div class="projects-grid">
+        <article class="card project">
+          <div class="project-top">
+            <h3>GazeShot v1.0 (stable)</h3>
+            <span class="pill">WPF • Win32 • Speech</span>
           </div>
-
-          <div class="card" id="experience">
-            <h3>Experience</h3>
-            <p class="muted">
-              20 years in mission-critical power generation & leadership—translating operations discipline into software delivery.
-            </p>
-            <ul class="bullets">
-              <li>Leadership, training, and operational execution under real constraints.</li>
-              <li>Risk management, quality, standardization, and “keep it running” reliability mindset.</li>
-              <li>Now applying that to cloud apps, tooling, and UX-aware engineering.</li>
-            </ul>
-          </div>
-
-          <div class="card" id="education">
-            <h3>Education</h3>
-            <ul class="bullets">
-              <li>Microsoft Software & Systems Academy (MSSA) — Cloud Application Development</li>
-              <li>BA — Organizational Management</li>
-              <li>Mechanical/Electrical Technology (Assoc.)</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="card contact" id="contact">
-          <h3>Contact</h3>
-          <p class="muted">
-            Best way to reach me: LinkedIn.
+          <p>
+            Windows tray utility with multi-monitor awareness and voice-controlled screenshot capture
+            using WPF, Win32 APIs, and speech recognition.
           </p>
-          <div class="contact-actions">
-            <a class="btn" id="btnLinkedIn2" href="#" rel="noopener" target="_blank">Open LinkedIn</a>
-            <a class="btn ghost" href="#top">Back to top</a>
+          <div class="project-links">
+            <a href="#" class="link" aria-disabled="true">Repo (add link)</a>
+            <a href="#" class="link" aria-disabled="true">Demo (add link)</a>
           </div>
-        </div>
+        </article>
 
-        <p class="footer">
-          <span class="muted">Tip:</span> Press <span class="kbd">V</span> for screensavers • Auto-scroll is optional • Volume starts low on purpose.
+        <article class="card project">
+          <div class="project-top">
+            <h3>Battleship Web Game</h3>
+            <span class="pill">HTML • CSS • JS</span>
+          </div>
+          <p>
+            Browser-based Battleship with turn-based logic, responsive layout, and local storage for game state.
+          </p>
+          <div class="project-links">
+            <a href="#" class="link" aria-disabled="true">Repo (add link)</a>
+            <a href="#" class="link" aria-disabled="true">Live (add link)</a>
+          </div>
+        </article>
+
+        <article class="card project">
+          <div class="project-top">
+            <h3>Gift Helper App</h3>
+            <span class="pill">C# • .NET</span>
+          </div>
+          <p>
+            Gift recommendation tool: user inputs recipient preferences, app suggests ideas; includes simple storage.
+          </p>
+          <div class="project-links">
+            <a href="#" class="link" aria-disabled="true">Repo (add link)</a>
+          </div>
+        </article>
+
+        <article class="card project">
+          <div class="project-top">
+            <h3>Bolt Master Game (concept)</h3>
+            <span class="pill">Unity (or similar)</span>
+          </div>
+          <p>
+            Mobile physics puzzle game where players assemble and launch bolts to solve challenges; designed with app-store standards in mind.
+          </p>
+          <div class="project-links">
+            <a href="#" class="link" aria-disabled="true">Design notes (add link)</a>
+          </div>
+        </article>
+
+        <article class="card project">
+          <div class="project-top">
+            <h3>(True Free) AI Image Upscaler</h3>
+            <span class="pill">Open-source AI • On-device</span>
+          </div>
+          <p>
+            Free image upscaling app using open-source models to enhance resolution and clarity; UI-first, on-device processing.
+          </p>
+          <div class="project-links">
+            <a href="#" class="link" aria-disabled="true">Repo (add link)</a>
+          </div>
+        </article>
+
+        <article class="card project">
+          <div class="project-top">
+            <h3>MSSA Training Tracker</h3>
+            <span class="pill">C# • .NET MAUI • Azure</span>
+          </div>
+          <p>
+            Internal tool to track assignments/milestones with progress dashboards and reminders; cloud-backed storage.
+          </p>
+          <div class="project-links">
+            <a href="#" class="link" aria-disabled="true">Repo (add link)</a>
+          </div>
+        </article>
+      </div>
+
+      <div class="section-subhead">
+        <h3>Project Snapshots</h3>
+        <p>
+          Visual proof without the mess. Click any snapshot to expand.
+          (These use your <code>assets/beats/1_Website.png … 12_Website.png</code> files.)
+        </p>
+      </div>
+
+      <div id="snapshotGrid" class="snapshots" aria-label="Project snapshots grid"></div>
+    </section>
+
+    <section id="experience" class="section">
+      <div class="section-head">
+        <h2>Experience</h2>
+        <p>Ops discipline → engineering reliability.</p>
+      </div>
+
+      <div class="grid-2">
+        <article class="card">
+          <h3>20 years — mission-critical power & leadership</h3>
+          <ul>
+            <li>Leadership, training, and execution under real constraints</li>
+            <li>Risk management, quality, standardization, inspections</li>
+            <li>Now applying that mindset to cloud apps, tooling, and UX-aware engineering</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <h3>What recruiters actually care about</h3>
+          <ul>
+            <li>What you built</li>
+            <li>Why you built it</li>
+            <li>Constraints/tradeoffs</li>
+            <li>Impact (even if small)</li>
+          </ul>
+          <p class="note">
+            That’s why this site is shifting toward “proof + structure” and away from gimmicks. 
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section id="education" class="section">
+      <div class="section-head">
+        <h2>Education</h2>
+      </div>
+
+      <div class="grid-3">
+        <article class="card">
+          <h3>Microsoft Software & Systems Academy (MSSA)</h3>
+          <p>Cloud Application Development</p>
+        </article>
+
+        <article class="card">
+          <h3>BA — Organizational Management</h3>
+          <p>University of Arizona Global Campus</p>
+        </article>
+
+        <article class="card">
+          <h3>Mechanical/Electrical Technology</h3>
+          <p>Associate’s degree</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="contact" class="section">
+      <div class="section-head">
+        <h2>Contact</h2>
+        <p>Best way to reach me: LinkedIn.</p>
+      </div>
+
+      <div class="card contact-card">
+        <div class="contact-actions">
+          <a class="hud-chip" href="https://www.linkedin.com/in/james-e-gill" target="_blank" rel="noopener">Open LinkedIn</a>
+          <button class="hud-chip" id="btnTop" type="button">Back to top</button>
+        </div>
+        <p class="tipline">
+          Tip: Auto-scroll starts ON by default. Music attempts to autoplay at low volume (may be blocked by browser policy). 
         </p>
       </div>
     </section>
+
+    <footer class="footer">
+      <p>
+        Built with plain HTML/CSS/JS on GitHub Pages. Fast, portable, no magic.
+        (Also: images in grids use lazy loading for performance.) 
+      </p>
+    </footer>
   </main>
 
-  <!-- Bubble detail modal -->
-  <div class="modal" id="detailModal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Details">
+  <!-- Screensaver Picker Modal -->
+  <div id="picker" class="modal" aria-hidden="true" role="dialog" aria-label="Screensaver picker">
     <div class="modal-panel">
       <div class="modal-head">
-        <div class="modal-title" id="detailTitle">Details</div>
-        <button class="modal-close" id="detailClose" type="button">Close</button>
+        <h2>Screensavers</h2>
+        <button class="hud-chip" id="btnClosePicker" type="button">Close</button>
       </div>
-      <div class="modal-body" id="detailBody"></div>
+
+      <div class="picker-grid">
+        <button class="picker-item" type="button" data-video="assets/video/Alien-Beach-Waves.mp4">
+          <span class="picker-title">Alien Beach Waves</span>
+          <span class="picker-sub">assets/video/Alien-Beach-Waves.mp4</span>
+        </button>
+
+        <button class="picker-item" type="button" data-video="assets/video/Screensaver-1.mp4">
+          <span class="picker-title">Screensaver 1</span>
+          <span class="picker-sub">assets/video/Screensaver-1.mp4</span>
+        </button>
+
+        <button class="picker-item" type="button" data-video="assets/video/Screensaver-4.mp4">
+          <span class="picker-title">Screensaver 4</span>
+          <span class="picker-sub">assets/video/Screensaver-4.mp4</span>
+        </button>
+      </div>
+
+      <p class="note">
+        Background video is muted for professionalism + autoplay reliability. Audio is controlled separately. 
+      </p>
     </div>
   </div>
 
-  <!-- Screensaver overlay (single player restored) -->
-  <div class="overlay" id="ssOverlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Screensavers">
-    <div class="overlay-panel">
-      <div class="overlay-head">
-        <div class="overlay-title">Screensavers</div>
-        <button class="overlay-close" id="btnCloseSS" type="button">Close</button>
+  <!-- Snapshot Modal -->
+  <div id="lightbox" class="modal" aria-hidden="true" role="dialog" aria-label="Snapshot viewer">
+    <div class="modal-panel modal-panel--wide">
+      <div class="modal-head">
+        <h2 id="lightboxTitle">Snapshot</h2>
+        <button class="hud-chip" id="btnCloseLightbox" type="button">Close</button>
       </div>
-
-      <div class="overlay-video">
-        <video id="ssVideo" playsinline></video>
-      </div>
-
-      <div class="overlay-controls">
-        <button class="btn small" id="btnPrevSS" type="button">Prev</button>
-        <button class="btn small ghost" id="btnToggleSSMute" type="button">Mute</button>
-        <button class="btn small" id="btnNextSS" type="button">Next</button>
-      </div>
-
-      <div class="overlay-foot">
-        <span class="muted" id="ssLabel">—</span>
-        <span class="muted">Tip: <span class="kbd">V</span> toggles this. Bottom-right corner is “hidden” on purpose.</span>
+      <div class="modal-body">
+        <img id="lightboxImg" alt="" />
       </div>
     </div>
   </div>
-
-  <!-- Mouse trail container -->
-  <div id="trail" aria-hidden="true"></div>
 </body>
 </html>

@@ -1,520 +1,446 @@
-/* =========================================================
-   Career Lifeline — James Gill
-   Drop-in app.js for GitHub Pages (static)
-   ========================================================= */
+(() => {
+  "use strict";
 
-"use strict";
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-/** 1) UPDATE THESE LINKS ONCE (no hunting through HTML) */
-const CONFIG = {
-  linkedInUrl: "https://www.linkedin.com/in/james-e-gill",
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // Audio playlist (make sure these paths exist exactly)
-  audioPlaylist: [
-    "assets/audio/I_am_me.mp3",
-    "assets/audio/Alien-Beach-Waves.mp3",
-    "assets/audio/Travel-through-space.mp3",
-    "assets/audio/Blender-Hyperspace-Jump.mp3",
-  ],
+  const els = {
+    toast: $("#toast"),
+    btnTheme: $("#btnTheme"),
+    btnAutoScroll: $("#btnAutoScroll"),
+    btnMusic: $("#btnMusic"),
+    btnTrack: $("#btnTrack"),
+    volRange: $("#volRange"),
+    btnScreensavers: $("#btnScreensavers"),
+    btnClosePicker: $("#btnClosePicker"),
+    picker: $("#picker"),
+    bgVideo: $("#bgVideo"),
+    bgAudio: $("#bgAudio"),
+    snapshotGrid: $("#snapshotGrid"),
+    lightbox: $("#lightbox"),
+    btnCloseLightbox: $("#btnCloseLightbox"),
+    lightboxImg: $("#lightboxImg"),
+    lightboxTitle: $("#lightboxTitle"),
+    btnTop: $("#btnTop"),
+    navLinks: $$(".nav-link"),
+  };
 
-  // Screensavers (single-player overlay)
-  screensavers: [
-    "assets/video/Screensaver-1.mp4",
-    "assets/video/Screensaver-4.mp4",
-    "assets/video/Alien-Beach-Waves.mp4",
-  ],
+  const state = {
+    theme: localStorage.getItem("theme") || "night",
+    autoscroll: (localStorage.getItem("autoscroll") || "on") === "on",
+    music: (localStorage.getItem("music") || "on"),
+    volume: clamp(parseFloat(localStorage.getItem("volume") || "0.20"), 0, 1),
+    trackIndex: clampInt(parseInt(localStorage.getItem("trackIndex") || "0", 10), 0, 3),
+    autoScrollRunning: false,
+  };
 
-  // “Beats” images used as floating objects
-  beatsImages: [
-    "assets/beats/1_Website.png",
-    "assets/beats/2_Website.png",
-    "assets/beats/3_Website.png",
-    "assets/beats/4_Website.png",
-    "assets/beats/5_Website.png",
-    "assets/beats/6_Website.png",
-    "assets/beats/7_Website.png",
-    "assets/beats/8_Website.png",
-    "assets/beats/9_Website.png",
-    "assets/beats/10_Website.png",
-    "assets/beats/11_Website.png",
-    "assets/beats/12_Website.png",
-  ],
+  // --- Music playlist (your files) ---
+  const tracks = [
+    { title: "I Am Me", src: "assets/audio/I_am_me.mp3" },
+    { title: "Alien Beach Waves", src: "assets/audio/Alien-Beach-Waves.mp3" },
+    { title: "Travel Through Space", src: "assets/audio/Travel-through-space.mp3" },
+    { title: "Blender Hyperspace Jump", src: "assets/audio/Blender-Hyperspace-Jump.mp3" },
+  ];
 
-  // Starting volume (professional)
-  startVolume: 0.20, // 20%
+  init();
 
-  // Auto-scroll speed (px per frame-ish)
-  autoScrollSpeed: 0.55,
-};
+  function init() {
+    document.body.dataset.theme = state.theme;
 
-/** 2) Scene items (text + images) — tuned to feel “back → front” */
-const SCENE_ITEMS = [
-  // Text bubbles
-  {
-    kind: "text",
-    title: "USAF → Cloud App Dev",
-    text: "20 years of mission-critical ops discipline, now building software that stays reliable under pressure.",
-    x: -260, y: -160, z: -900
-  },
-  {
-    kind: "text",
-    title: "Human-first, not hype-first",
-    text: "UX-aware engineering: clean flows, predictable behavior, and zero nonsense when it matters.",
-    x: 260, y: -40, z: -750
-  },
-  {
-    kind: "text",
-    title: "Projects matter",
-    text: "I build. I ship. I iterate. Portfolio isn’t a vibe—it's receipts.",
-    x: -220, y: 110, z: -620
-  },
+    // UI wiring
+    els.btnTheme.addEventListener("click", toggleTheme);
+    els.btnAutoScroll.addEventListener("click", toggleAutoScroll);
+    els.btnMusic.addEventListener("click", toggleMusic);
+    els.btnTrack.addEventListener("click", nextTrack);
 
-  // Image bubbles (beats)
-  { kind: "img", title: "Project Snapshot", text: "Floating visuals (beats folder).", imgIndex: 0, x: 260, y: 160, z: -980 },
-  { kind: "img", title: "Project Snapshot", text: "Click bubbles for details.", imgIndex: 1, x: -280, y: 260, z: -820 },
-  { kind: "img", title: "Project Snapshot", text: "This is the “Luma-like” scroll fly-through.", imgIndex: 2, x: 220, y: 320, z: -700 },
+    els.volRange.value = String(state.volume);
+    els.volRange.addEventListener("input", onVolumeChange);
 
-  // More text, more depth
-  {
-    kind: "text",
-    title: "Reliability is a design choice",
-    text: "I care about failure modes, edge cases, and what happens at 2am on a Sunday.",
-    x: -320, y: 420, z: -920
-  },
-  {
-    kind: "text",
-    title: "MSSA journey",
-    text: "Training hard, building tools, and leveling up into professional software engineering.",
-    x: 240, y: 520, z: -780
-  },
+    els.btnScreensavers.addEventListener("click", openPicker);
+    els.btnClosePicker.addEventListener("click", closePicker);
+    els.picker.addEventListener("click", (e) => {
+      if (e.target === els.picker) closePicker();
+    });
 
-  // More images later in the scroll
-  { kind: "img", title: "Project Snapshot", text: "More visuals as you go.", imgIndex: 3, x: -220, y: 620, z: -1020 },
-  { kind: "img", title: "Project Snapshot", text: "Swap these to anything you want.", imgIndex: 4, x: 260, y: 720, z: -860 },
-];
+    $$(".picker-item").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const src = btn.getAttribute("data-video");
+        if (src) setBackgroundVideo(src);
+        closePicker();
+        toast(`Screensaver set: ${src.split("/").pop()}`);
+      });
+    });
 
-const $ = (sel) => document.querySelector(sel);
+    document.addEventListener("keydown", (e) => {
+      if (e.key.toLowerCase() === "v") {
+        const isOpen = els.picker.getAttribute("aria-hidden") === "false";
+        isOpen ? closePicker() : openPicker();
+      }
+    });
 
-const sceneEl = $("#scene");
-const scrollRoot = $("#scrollRoot");
+    // Back to top
+    els.btnTop?.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
 
-const btnTheme = $("#btnTheme");
-const btnTrail = $("#btnTrail");
-const btnAutoScroll = $("#btnAutoScroll");
-const btnAudio = $("#btnAudio");
-const vol = $("#vol");
-const hudHint = $("#hudHint");
+    // Active nav highlighting
+    initNavSpy();
 
-const btnLinkedIn = $("#btnLinkedIn");
-const btnLinkedIn2 = $("#btnLinkedIn2");
+    // Build snapshots grid (1..12)
+    buildSnapshots();
 
-const secretHotspot = $("#secretHotspot");
+    // Lightbox close
+    els.btnCloseLightbox.addEventListener("click", closeLightbox);
+    els.lightbox.addEventListener("click", (e) => {
+      if (e.target === els.lightbox) closeLightbox();
+    });
 
-/** Modal */
-const detailModal = $("#detailModal");
-const detailClose = $("#detailClose");
-const detailTitle = $("#detailTitle");
-const detailBody = $("#detailBody");
+    // Music init
+    setTrack(state.trackIndex, { autoplayTry: false });
+    applyVolume(state.volume);
 
-/** Screensavers */
-const ssOverlay = $("#ssOverlay");
-const ssVideo = $("#ssVideo");
-const btnCloseSS = $("#btnCloseSS");
-const btnPrevSS = $("#btnPrevSS");
-const btnNextSS = $("#btnNextSS");
-const btnToggleSSMute = $("#btnToggleSSMute");
-const ssLabel = $("#ssLabel");
+    // Attempt autoplay ON load (may be blocked)
+    if (state.music !== "off") {
+      attemptAutoplayAudio();
+    } else {
+      updateMusicUI(false);
+    }
 
-/** Mouse trail */
-const trailRoot = $("#trail");
+    // Auto scroll starts automatically (unless reduced motion)
+    if (state.autoscroll && !prefersReducedMotion) startAutoScroll();
+    updateAutoScrollUI();
 
-let themeIndex = 0;
-const themes = ["night", "retro", "sand"];
+    // Stop auto-scroll on deliberate user interaction (don’t fight the user)
+    ["wheel", "touchstart", "keydown"].forEach(evt => {
+      window.addEventListener(evt, () => {
+        if (state.autoScrollRunning) stopAutoScroll(false);
+      }, { passive: true });
+    });
 
-let trailOn = false;
-let autoScrollOn = false;
-let autoScrollRAF = 0;
-
-/** Audio state */
-let audio = null;
-let audioIndex = 0;
-let audioWanted = true; // user wants autoplay
-let audioUnlocked = false;
-
-function setHint(msg, timeoutMs = 2200) {
-  hudHint.textContent = msg;
-  if (timeoutMs > 0) {
-    window.clearTimeout(setHint._t);
-    setHint._t = window.setTimeout(() => (hudHint.textContent = ""), timeoutMs);
-  }
-}
-
-/* ---------------------------
-   Link wiring
----------------------------- */
-function wireLinks() {
-  if (CONFIG.linkedInUrl && CONFIG.linkedInUrl.startsWith("http")) {
-    btnLinkedIn.href = CONFIG.linkedInUrl;
-    btnLinkedIn2.href = CONFIG.linkedInUrl;
-  } else {
-    // Keep clickable but obvious
-    btnLinkedIn.href = "#contact";
-    btnLinkedIn2.href = "#contact";
-    setHint("Paste your LinkedIn URL in app.js → CONFIG.linkedInUrl", 5000);
-  }
-}
-
-/* ---------------------------
-   Build 3D scene DOM
----------------------------- */
-const bubbles = [];
-
-function createBubble(item) {
-  const el = document.createElement("div");
-  el.className = "bubble";
-  el.tabIndex = 0;
-
-  const t = document.createElement("div");
-  t.className = "title";
-  t.textContent = item.title || "—";
-
-  const p = document.createElement("p");
-  p.className = "text";
-  p.textContent = item.text || "";
-
-  el.appendChild(t);
-  el.appendChild(p);
-
-  if (item.kind === "img") {
-    const img = document.createElement("img");
-    img.className = "img";
-    const src = CONFIG.beatsImages[item.imgIndex] || CONFIG.beatsImages[0] || "";
-    img.src = src;
-    img.alt = item.title || "Project image";
-    img.loading = "lazy";
-    el.appendChild(img);
+    // Make sure controls reflect saved state
+    updateTrackUI();
   }
 
-  el.addEventListener("click", () => openDetail(item));
-  el.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") openDetail(item);
-  });
-
-  sceneEl.appendChild(el);
-  bubbles.push({ el, item });
-}
-
-function buildScene() {
-  sceneEl.innerHTML = "";
-  bubbles.length = 0;
-  SCENE_ITEMS.forEach(createBubble);
-}
-
-/* ---------------------------
-   3D transform update
----------------------------- */
-function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
-
-function updateScene() {
-  const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
-  const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-  const t = scrollY / maxScroll; // 0..1
-
-  // Map scroll progress into a “camera” moving forward
-  // Bigger cameraZ means items approach the viewer
-  const cameraAdvance = t * 1200; // tune this
-  const cameraY = t * 1100;
-
-  for (const b of bubbles) {
-    const it = b.item;
-
-    // Each item has a base x/y/z.
-    // We move camera forward through Z and down through Y.
-    const x = it.x;
-    const y = it.y - cameraY;
-    const z = it.z + cameraAdvance;
-
-    // When z gets close to 0, it’s “near the viewer”
-    const near = clamp(1 - Math.abs(z) / 1200, 0, 1);
-    const opacity = clamp(near * 1.15, 0.08, 1);
-
-    // Scale a bit as it comes forward, but DO NOT explode
-    const scale = 0.86 + near * 0.28;
-
-    // Keep centered at viewport mid; offsets stored in CSS vars for hover
-    b.el.style.setProperty("--x", `${x}px`);
-    b.el.style.setProperty("--y", `${y}px`);
-    b.el.style.setProperty("--z", `${z}px`);
-    b.el.style.opacity = opacity.toFixed(3);
-
-    b.el.style.transform =
-      `translate3d(calc(-50% + ${x}px), calc(-50% + ${y}px), ${z}px) scale(${scale})`;
+  // ----------------------------
+  // Theme
+  // ----------------------------
+  function toggleTheme() {
+    state.theme = (state.theme === "night") ? "day" : "night";
+    document.body.dataset.theme = state.theme;
+    localStorage.setItem("theme", state.theme);
+    toast(`Theme: ${state.theme}`);
   }
 
-  requestAnimationFrame(updateScene);
-}
+  // ----------------------------
+  // Auto Scroll
+  // ----------------------------
+  let rafId = 0;
+  let lastT = 0;
 
-/* ---------------------------
-   Detail modal
----------------------------- */
-function openDetail(item) {
-  detailTitle.textContent = item.title || "Details";
-  const parts = [];
+  function toggleAutoScroll() {
+    state.autoscroll = !state.autoscroll;
+    localStorage.setItem("autoscroll", state.autoscroll ? "on" : "off");
 
-  parts.push(`<p>${escapeHtml(item.text || "")}</p>`);
+    if (state.autoscroll && !prefersReducedMotion) {
+      startAutoScroll();
+      toast("Auto-scroll enabled");
+    } else {
+      stopAutoScroll(true);
+      toast(prefersReducedMotion ? "Auto-scroll disabled (reduced motion)" : "Auto-scroll disabled");
+    }
+    updateAutoScrollUI();
+  }
 
-  if (item.kind === "img") {
-    const src = CONFIG.beatsImages[item.imgIndex] || "";
-    if (src) {
-      parts.push(`<img src="${src}" alt="${escapeHtml(item.title || "Image")}" style="width:100%;border-radius:14px;border:1px solid rgba(255,255,255,.10);margin-top:10px;" />`);
+  function startAutoScroll() {
+    if (prefersReducedMotion) return;
+    if (state.autoScrollRunning) return;
+
+    state.autoScrollRunning = true;
+    lastT = performance.now();
+
+    const pxPerSec = 28; // steady pace
+
+    const step = (t) => {
+      if (!state.autoScrollRunning) return;
+
+      const dt = (t - lastT) / 1000;
+      lastT = t;
+
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if (window.scrollY >= maxScroll - 2) {
+        stopAutoScroll(false);
+        updateAutoScrollUI();
+        return;
+      }
+
+      window.scrollBy(0, pxPerSec * dt);
+      rafId = requestAnimationFrame(step);
+    };
+
+    rafId = requestAnimationFrame(step);
+    updateAutoScrollUI();
+  }
+
+  function stopAutoScroll(updateStorage) {
+    state.autoScrollRunning = false;
+    cancelAnimationFrame(rafId);
+
+    // If the user interrupts it, we keep the toggle ON, but it’s paused.
+    // If they toggle it OFF, we store it OFF.
+    if (updateStorage) {
+      state.autoscroll = false;
+      localStorage.setItem("autoscroll", "off");
     }
   }
 
-  parts.push(`<p class="muted" style="margin-top:12px;">Tip: This is where we can expand your “growth & adventure” story with short milestone write-ups.</p>`);
+  function updateAutoScrollUI() {
+    const on = state.autoscroll && state.autoScrollRunning;
+    els.btnAutoScroll.setAttribute("aria-pressed", String(!!on));
+    els.btnAutoScroll.textContent = `Auto Scroll: ${on ? "ON" : "OFF"}`;
 
-  detailBody.innerHTML = parts.join("");
-  detailModal.setAttribute("aria-hidden", "false");
-}
-
-function closeDetail() {
-  detailModal.setAttribute("aria-hidden", "true");
-  detailBody.innerHTML = "";
-}
-
-detailClose.addEventListener("click", closeDetail);
-detailModal.addEventListener("click", (e) => {
-  if (e.target === detailModal) closeDetail();
-});
-
-function escapeHtml(s) {
-  return String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-/* ---------------------------
-   Screensavers (single player)
----------------------------- */
-let ssIndex = 0;
-
-function openSS() {
-  ssOverlay.setAttribute("aria-hidden", "false");
-  loadSS(ssIndex);
-}
-
-function closeSS() {
-  ssOverlay.setAttribute("aria-hidden", "true");
-  try { ssVideo.pause(); } catch {}
-}
-
-function loadSS(i) {
-  if (!CONFIG.screensavers.length) return;
-
-  ssIndex = (i + CONFIG.screensavers.length) % CONFIG.screensavers.length;
-  const src = CONFIG.screensavers[ssIndex];
-  ssLabel.textContent = `${src.split("/").pop()} (${ssIndex + 1}/${CONFIG.screensavers.length})`;
-
-  ssVideo.src = src;
-  ssVideo.loop = true;
-  ssVideo.muted = false;
-  ssVideo.volume = 0.45;
-
-  // Video autoplay usually allowed if muted, but we want sound inside overlay.
-  // We'll try; if blocked, user can press play in the video controls.
-  ssVideo.play().catch(() => {
-    ssVideo.controls = true;
-    setHint("Video controls enabled (browser blocked autoplay in overlay).", 3000);
-  });
-}
-
-btnCloseSS.addEventListener("click", closeSS);
-btnPrevSS.addEventListener("click", () => loadSS(ssIndex - 1));
-btnNextSS.addEventListener("click", () => loadSS(ssIndex + 1));
-btnToggleSSMute.addEventListener("click", () => {
-  ssVideo.muted = !ssVideo.muted;
-  btnToggleSSMute.textContent = ssVideo.muted ? "Unmute" : "Mute";
-});
-
-secretHotspot.addEventListener("click", openSS);
-
-window.addEventListener("keydown", (e) => {
-  if (e.key.toLowerCase() === "v") {
-    const open = ssOverlay.getAttribute("aria-hidden") === "false";
-    open ? closeSS() : openSS();
-  }
-  if (e.key === "Escape") {
-    closeSS();
-    closeDetail();
-  }
-});
-
-/* ---------------------------
-   Theme + Mouse trail + Auto scroll
----------------------------- */
-btnTheme.addEventListener("click", () => {
-  themeIndex = (themeIndex + 1) % themes.length;
-  document.body.setAttribute("data-theme", themes[themeIndex]);
-  setHint(`Theme: ${themes[themeIndex]}`);
-});
-
-function clearTrail() {
-  trailRoot.innerHTML = "";
-}
-
-function enableTrail() {
-  clearTrail();
-  // Create a few persistent dots
-  for (let i = 0; i < 10; i++) {
-    const dot = document.createElement("div");
-    dot.className = "trail-dot";
-    trailRoot.appendChild(dot);
-  }
-  const dots = Array.from(trailRoot.querySelectorAll(".trail-dot"));
-  let idx = 0;
-
-  const onMove = (e) => {
-    if (!trailOn) return;
-    const dot = dots[idx % dots.length];
-    idx++;
-    dot.style.left = `${e.clientX}px`;
-    dot.style.top = `${e.clientY}px`;
-    dot.style.opacity = "0.9";
-    window.setTimeout(() => { dot.style.opacity = "0.0"; }, 220);
-  };
-
-  window.addEventListener("mousemove", onMove);
-  enableTrail._off = () => window.removeEventListener("mousemove", onMove);
-}
-
-btnTrail.addEventListener("click", () => {
-  trailOn = !trailOn;
-  if (trailOn) {
-    enableTrail();
-    setHint("Mouse trail: ON");
-  } else {
-    if (enableTrail._off) enableTrail._off();
-    clearTrail();
-    setHint("Mouse trail: OFF");
-  }
-});
-
-function tickAutoScroll() {
-  if (!autoScrollOn) return;
-
-  const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-  const next = (window.scrollY || 0) + CONFIG.autoScrollSpeed;
-
-  if (next >= maxScroll - 1) {
-    // Stop at bottom (don’t loop unless you want it)
-    autoScrollOn = false;
-    btnAutoScroll.textContent = "Auto Scroll";
-    setHint("Reached bottom. Auto-scroll stopped.");
-    return;
+    // If autoscroll is toggled ON but paused due to user input:
+    if (state.autoscroll && !state.autoScrollRunning && !prefersReducedMotion) {
+      els.btnAutoScroll.textContent = "Auto Scroll: PAUSED";
+    }
   }
 
-  window.scrollTo({ top: next, behavior: "auto" });
-  autoScrollRAF = requestAnimationFrame(tickAutoScroll);
-}
-
-btnAutoScroll.addEventListener("click", () => {
-  autoScrollOn = !autoScrollOn;
-  btnAutoScroll.textContent = autoScrollOn ? "Auto Scroll: ON" : "Auto Scroll";
-  setHint(autoScrollOn ? "Auto-scroll: ON" : "Auto-scroll: OFF");
-  if (autoScrollOn) {
-    cancelAnimationFrame(autoScrollRAF);
-    autoScrollRAF = requestAnimationFrame(tickAutoScroll);
+  // ----------------------------
+  // Music
+  // ----------------------------
+  function onVolumeChange() {
+    const v = clamp(parseFloat(els.volRange.value), 0, 1);
+    state.volume = v;
+    localStorage.setItem("volume", String(v));
+    applyVolume(v);
   }
-});
 
-/* ---------------------------
-   Audio: autoplay attempt + auto-unlock on any interaction
----------------------------- */
-function ensureAudio() {
-  if (audio) return;
+  function applyVolume(v) {
+    els.bgAudio.volume = clamp(v, 0, 1);
+  }
 
-  audio = new Audio();
-  audio.preload = "auto";
-  audio.loop = true;
-  audio.volume = CONFIG.startVolume;
+  function toggleMusic() {
+    const audio = els.bgAudio;
 
-  vol.value = String(CONFIG.startVolume);
+    if (state.music === "off") {
+      state.music = "on";
+      localStorage.setItem("music", "on");
+      attemptAutoplayAudio(true);
+      return;
+    }
 
-  audio.src = CONFIG.audioPlaylist[audioIndex] || "";
-}
+    // If playing, pause
+    if (!audio.paused) {
+      audio.pause();
+      state.music = "off";
+      localStorage.setItem("music", "off");
+      updateMusicUI(false);
+      toast("Music: OFF");
+      return;
+    }
 
-function playAudio() {
-  ensureAudio();
-  audioWanted = true;
+    // If paused, try play
+    state.music = "on";
+    localStorage.setItem("music", "on");
+    attemptAutoplayAudio(true);
+  }
 
-  // Attempt play
-  return audio.play().then(() => {
-    audioUnlocked = true;
-    btnAudio.textContent = "Music: ON";
-    setHint(`Music: ON (${Math.round(audio.volume * 100)}%)`);
-  }).catch(() => {
-    // Autoplay likely blocked until a gesture.
-    btnAudio.textContent = "Music (blocked)";
-    setHint("Browser blocked autoplay. Scroll/click/any key will unlock sound.", 4200);
-    return Promise.resolve(false);
-  });
-}
+  function attemptAutoplayAudio(userInitiated = false) {
+    const audio = els.bgAudio;
 
-function pauseAudio() {
-  if (!audio) return;
-  audioWanted = false;
-  audio.pause();
-  btnAudio.textContent = "Music";
-  setHint("Music: OFF");
-}
+    applyVolume(state.volume);
 
-btnAudio.addEventListener("click", () => {
-  // manual toggle for user control, but autoplay logic is still present
-  ensureAudio();
-  if (audio.paused) playAudio();
-  else pauseAudio();
-});
+    // Attempt play. Browsers may block autoplay; if blocked we show a toast.
+    const p = audio.play();
+    if (p && typeof p.then === "function") {
+      p.then(() => {
+        updateMusicUI(true);
+        toast(`Music: ON (${tracks[state.trackIndex].title})`);
+      }).catch(() => {
+        updateMusicUI(false);
 
-vol.addEventListener("input", () => {
-  ensureAudio();
-  audio.volume = Number(vol.value);
-});
+        // Explain once, cleanly.
+        // Autoplay restrictions are browser policy; user can click Music once to enable.
+        if (!userInitiated) {
+          toast("Audio autoplay was blocked by your browser. Click “Music: ON” once to enable sound.");
+        } else {
+          toast("Audio blocked. Try clicking Music again (browser policy).");
+        }
+      });
+    } else {
+      // Older browsers (rare)
+      updateMusicUI(!audio.paused);
+    }
+  }
 
-/** Autoplay request on load */
-function initAutoplay() {
-  ensureAudio();
+  function updateMusicUI(isOn) {
+    els.btnMusic.setAttribute("aria-pressed", String(!!isOn));
+    els.btnMusic.textContent = `Music: ${isOn ? "ON" : "OFF"}`;
+  }
 
-  // Try immediately
-  playAudio();
+  function nextTrack() {
+    const next = (state.trackIndex + 1) % tracks.length;
+    setTrack(next, { autoplayTry: true });
+  }
 
-  // If blocked, unlock automatically on first interaction (not “play button only”)
-  const unlock = () => {
-    if (!audioWanted) return;
-    playAudio();
-    window.removeEventListener("pointerdown", unlock);
-    window.removeEventListener("keydown", unlock);
-    window.removeEventListener("scroll", unlock, { passive: true });
-  };
+  function setTrack(index, { autoplayTry } = { autoplayTry: true }) {
+    state.trackIndex = clampInt(index, 0, tracks.length - 1);
+    localStorage.setItem("trackIndex", String(state.trackIndex));
 
-  window.addEventListener("pointerdown", unlock, { once: true });
-  window.addEventListener("keydown", unlock, { once: true });
-  window.addEventListener("scroll", unlock, { passive: true, once: true });
-}
+    const t = tracks[state.trackIndex];
+    els.bgAudio.src = t.src;
 
-/* ---------------------------
-   Init
----------------------------- */
-function init() {
-  wireLinks();
-  buildScene();
-  requestAnimationFrame(updateScene);
+    updateTrackUI();
 
-  initAutoplay();
+    if (autoplayTry && state.music !== "off") {
+      attemptAutoplayAudio(true);
+    }
+  }
 
-  // Small tip so you can verify the “hidden” hotspot still exists
-  setHint("Tip: Press V for screensavers. Volume starts low.", 4200);
-}
+  function updateTrackUI() {
+    els.btnTrack.textContent = `Track: ${state.trackIndex + 1}/${tracks.length}`;
+  }
 
-document.addEventListener("DOMContentLoaded", init);
+  // ----------------------------
+  // Screensavers
+  // ----------------------------
+  function openPicker() {
+    els.picker.setAttribute("aria-hidden", "false");
+  }
+  function closePicker() {
+    els.picker.setAttribute("aria-hidden", "true");
+  }
+  function setBackgroundVideo(src) {
+    // swap source cleanly
+    const v = els.bgVideo;
+    v.pause();
+    v.innerHTML = "";
+
+    const s = document.createElement("source");
+    s.src = src;
+    s.type = "video/mp4";
+    v.appendChild(s);
+
+    v.load();
+    // muted autoplay should work reliably
+    v.muted = true;
+    v.play().catch(() => { /* ignore */ });
+  }
+
+  // ----------------------------
+  // Snapshots grid (beats 1..12)
+  // ----------------------------
+  function buildSnapshots() {
+    const grid = els.snapshotGrid;
+    if (!grid) return;
+
+    const frag = document.createDocumentFragment();
+
+    for (let i = 1; i <= 12; i++) {
+      const src = `assets/beats/${i}_Website.png`;
+
+      const card = document.createElement("div");
+      card.className = "snapshot";
+      card.setAttribute("role", "button");
+      card.setAttribute("tabindex", "0");
+      card.setAttribute("aria-label", `Open snapshot ${i}`);
+
+      const img = document.createElement("img");
+      img.src = src;
+      img.alt = `Website snapshot ${i}`;
+      img.loading = "lazy"; // performance win
+      img.addEventListener("error", () => {
+        // If a file is missing, hide the tile (prevents “broken image” clutter)
+        card.style.display = "none";
+      });
+
+      const cap = document.createElement("div");
+      cap.className = "cap";
+      cap.textContent = `Snapshot ${i}`;
+
+      card.appendChild(img);
+      card.appendChild(cap);
+
+      card.addEventListener("click", () => openLightbox(i, src));
+      card.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openLightbox(i, src);
+        }
+      });
+
+      frag.appendChild(card);
+    }
+
+    grid.appendChild(frag);
+  }
+
+  function openLightbox(i, src) {
+    els.lightboxTitle.textContent = `Snapshot ${i}`;
+    els.lightboxImg.src = src;
+    els.lightboxImg.alt = `Website snapshot ${i}`;
+    els.lightbox.setAttribute("aria-hidden", "false");
+  }
+
+  function closeLightbox() {
+    els.lightbox.setAttribute("aria-hidden", "true");
+    els.lightboxImg.src = "";
+    els.lightboxImg.alt = "";
+  }
+
+  // ----------------------------
+  // Nav Spy
+  // ----------------------------
+  function initNavSpy() {
+    const sections = ["about","projects","experience","education","contact"]
+      .map(id => document.getElementById(id))
+      .filter(Boolean);
+
+    if (!sections.length) return;
+
+    const io = new IntersectionObserver((entries) => {
+      // choose the most visible section
+      let best = null;
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        if (!best || e.intersectionRatio > best.intersectionRatio) best = e;
+      }
+      if (!best) return;
+
+      const id = best.target.id;
+      els.navLinks.forEach(a => {
+        const match = (a.getAttribute("href") === `#${id}`);
+        if (match) a.setAttribute("aria-current", "page");
+        else a.removeAttribute("aria-current");
+      });
+    }, { threshold: [0.25, 0.4, 0.55, 0.7] });
+
+    sections.forEach(s => io.observe(s));
+  }
+
+  // ----------------------------
+  // Toast
+  // ----------------------------
+  let toastTimer = 0;
+  function toast(msg) {
+    if (!els.toast) return;
+    clearTimeout(toastTimer);
+    els.toast.textContent = msg;
+    els.toast.style.display = "block";
+    toastTimer = window.setTimeout(() => {
+      els.toast.style.display = "none";
+      els.toast.textContent = "";
+    }, 4200);
+  }
+
+  // ----------------------------
+  // Helpers
+  // ----------------------------
+  function clamp(n, a, b) {
+    if (Number.isNaN(n)) return a;
+    return Math.max(a, Math.min(b, n));
+  }
+  function clampInt(n, a, b) {
+    if (!Number.isFinite(n)) return a;
+    return Math.max(a, Math.min(b, n | 0));
+  }
+})();
