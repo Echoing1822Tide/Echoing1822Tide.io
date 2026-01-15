@@ -16,6 +16,13 @@
     <canvas id="introCanvas" aria-hidden="true"></canvas>
   </div>
 
+  <!-- GLOBAL PARALLAX BACKGROUND STAGE (prevents section background bleed) -->
+  <div id="bgStage" aria-hidden="true">
+    <div id="bgLayerA" class="bgLayer"></div>
+    <div id="bgLayerB" class="bgLayer"></div>
+    <div class="bgStage__overlay"></div>
+  </div>
+
   <!-- Fixed header -->
   <header class="topbar">
     <div class="brand left">
@@ -117,14 +124,12 @@
             </ul>
           </div>
         </div>
-
-        <!-- Removed (by request): “What recruiters actually care about …” block -->
       </div>
 
       <div class="scrollArrowOnly" role="button" tabindex="0" data-scroll-next aria-label="Scroll to next section">⌄</div>
     </section>
 
-    <!-- EXPERIENCE (AirForce -> swaps to CADdets while staying in section) -->
+    <!-- EXPERIENCE -->
     <section
       id="experience"
       class="snapSection"
@@ -159,7 +164,7 @@
       <div class="scrollArrowOnly" role="button" tabindex="0" data-scroll-next aria-label="Scroll to next section">⌄</div>
     </section>
 
-    <!-- PROJECTS (GitHub cards only; no snapshots grid) -->
+    <!-- PROJECTS -->
     <section
       id="projects"
       class="snapSection"
@@ -204,10 +209,6 @@
             </p>
             <div class="actions">
               <a class="link" href="https://github.com/Echoing-1822-Tide" target="_blank" rel="noopener noreferrer">GitHub</a>
-              <!-- Keep these for later, but hidden for now:
-              <a class="link" href="#" target="_blank" rel="noreferrer">Repo</a>
-              <a class="link" href="#" target="_blank" rel="noreferrer">Live</a>
-              -->
             </div>
           </article>
 
@@ -223,9 +224,6 @@
             </p>
             <div class="actions">
               <a class="link" href="https://github.com/Echoing-1822-Tide" target="_blank" rel="noopener noreferrer">GitHub</a>
-              <!-- Keep these for later, but hidden for now:
-              <a class="link" href="#" target="_blank" rel="noreferrer">Repo</a>
-              -->
             </div>
           </article>
 
@@ -244,8 +242,6 @@
             </div>
           </article>
         </div>
-
-        <!-- Removed (by request): Project Snapshots grid + “Visual proof…” sentence -->
       </div>
 
       <div class="scrollArrowOnly" role="button" tabindex="0" data-scroll-next aria-label="Scroll to next section">⌄</div>
@@ -311,29 +307,4 @@
   <div id="screensaverModal" class="modal" aria-hidden="true" role="dialog" aria-label="Screensaver">
     <div class="modal__backdrop" data-close></div>
     <div class="modal__content" role="document">
-      <button class="modal__close" type="button" data-close aria-label="Close">✕</button>
-
-      <video id="ssVideo" class="ssVideo" preload="auto" muted></video>
-      <audio id="ssAudio" preload="auto"></audio>
-    </div>
-  </div>
-  <script>
-    // Ensure inline playback on browsers that do not support the 'playsinline' attribute (e.g., Firefox)
-    document.addEventListener('DOMContentLoaded', function() {
-      var ssVideo = document.getElementById('ssVideo');
-      if (ssVideo) {
-        // Set both camelCase and lowercase for maximum compatibility
-        ssVideo.playsInline = true;
-        ssVideo.setAttribute('playsinline', '');
-      }
-    });
-  </script>
-
-  <!-- Music element (single track) -->
-  <audio id="bgMusic" preload="auto" loop>
-    <source src="assets/audio/I_am_me.mp3" type="audio/mpeg" />
-  </audio>
-
-  <script src="app.js"></script>
-</body>
-</html>
+      <

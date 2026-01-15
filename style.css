@@ -1,9 +1,6 @@
 /* =========================================================
-   James Gill — GitHub Pages Portfolio (plain HTML/CSS/JS)
-   Notes:
-   - This file was rebuilt because your previous style.css
-     accidentally contained JavaScript.
-   - Includes iOS Safari prefixes for backdrop-filter + user-select.
+   James E. Gill — GitHub Pages Portfolio (plain HTML/CSS/JS)
+   - iOS Safari: keep vendor-prefixed properties BEFORE standard.
    ========================================================= */
 
 :root{
@@ -20,8 +17,6 @@
   --accent2: #9b7bff;
 
   --topbarH: 68px;
-  --navPad: 14px;
-
   --radius: 18px;
   --shadow: 0 18px 55px rgba(0,0,0,0.45);
 }
@@ -40,6 +35,7 @@ body{
   color: var(--ink);
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
   line-height: 1.5;
+  overflow: hidden; /* page itself doesn't scroll; snapRoot does */
 }
 
 a{ color: inherit; text-decoration: none; }
@@ -64,15 +60,17 @@ li{ margin: 6px 0; }
   position: fixed;
   inset: 0;
   z-index: 9999;
-  pointer-events: none; /* never block the page; it’s just a visual overlay */
+  pointer-events: none;
   display: grid;
   place-items: center;
   opacity: 1;
-  transition: opacity 650ms ease;
+  transition: opacity 650ms ease, visibility 0ms linear 650ms;
+  visibility: visible;
 }
 
 #introOverlay.hidden{
   opacity: 0;
+  visibility: hidden;
 }
 
 #introCanvas{
@@ -99,13 +97,52 @@ li{ margin: 6px 0; }
 }
 
 /* ---------------------------------------------------------
+   GLOBAL PARALLAX BACKGROUND STAGE (no section bleed)
+   --------------------------------------------------------- */
+
+#bgStage{
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: #05070c;
+}
+
+.bgLayer{
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: 50% 50%;
+  opacity: 1;
+  will-change: opacity, background-position;
+  transition: opacity 520ms ease;
+  filter: saturate(1.02) contrast(1.02);
+}
+
+#bgLayerB{
+  opacity: 0;
+}
+
+.bgStage__overlay{
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background:
+    radial-gradient(closest-side at 25% 20%, rgba(54,214,255,0.14), transparent 58%),
+    radial-gradient(closest-side at 75% 80%, rgba(155,123,255,0.14), transparent 60%),
+    linear-gradient(to bottom, rgba(0,0,0,0.28), rgba(0,0,0,0.62));
+}
+
+/* ---------------------------------------------------------
    Topbar
    --------------------------------------------------------- */
 
 .topbar {
   display: flex;
   align-items: center;
-  justify-content: flex-start; /* <-- LEFT align */
+  justify-content: flex-start;
   position: fixed;
   inset: 0 0 auto 0;
   height: var(--topbarH);
@@ -127,14 +164,6 @@ li{ margin: 6px 0; }
   font-size: 12px;
   color: var(--muted);
   margin-top: 2px;
-}
-
-.brand--centered {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
 }
 
 .brand.left {
@@ -248,56 +277,30 @@ li{ margin: 6px 0; }
 
 .snapRoot{
   position: relative;
-  height: 100vh; /* <-- changed from min-height */
+  z-index: 1;            /* above bgStage */
+  height: 100vh;         /* container scrolls, not body */
   width: 100%;
   overflow-y: auto;
   scroll-snap-type: y mandatory;
   scroll-behavior: smooth;
   overscroll-behavior-y: none;
-  scroll-padding-top: var(--topbarH, 64px);
+  scroll-padding-top: calc(var(--topbarH) + 10px);
 }
 
+/* Each section "locks" cleanly; no negative margin overlap */
 .snapSection{
   position: relative;
-  height: 100vh;
-  margin-top: calc(-1 * var(--topbarH));
-  padding-top: calc(var(--topbarH) + 44px);
+  min-height: 100vh;
   scroll-snap-align: start;
   scroll-snap-stop: always;
   display: grid;
   align-items: center;
+  padding-top: calc(var(--topbarH) + 44px);
   padding-left: 18px;
   padding-right: 18px;
   padding-bottom: 70px;
-  isolation: isolate; /* keeps background layers sane */
-}
-
-.snapSection::before{
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  background-image: var(--bgA);
-  background-position: center;
-  background-size: cover;
-  background-repeat: no-repeat;
-  transform: scale(1.02);
-  filter: saturate(1.02) contrast(1.02);
-}
-
-.snapSection.swapBg::before{
-  background-image: var(--bgB);
-}
-
-.snapSection::after{
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background:
-    radial-gradient(closest-side at 25% 20%, rgba(54,214,255,0.14), transparent 58%),
-    radial-gradient(closest-side at 75% 80%, rgba(155,123,255,0.14), transparent 60%),
-    linear-gradient(to bottom, rgba(0,0,0,0.28), rgba(0,0,0,0.62));
+  isolation: isolate;
+  overflow: hidden; /* hard stop: prevents any internal bleed artifacts */
 }
 
 /* Center panel */
@@ -453,8 +456,7 @@ li{ margin: 6px 0; }
 }
 
 /* ---------------------------------------------------------
-   Scroll cue (first section: text + arrow)
-   Arrow-only cues (all sections except last)
+   Scroll cue
    --------------------------------------------------------- */
 
 .scrollCue{
@@ -623,4 +625,5 @@ li{ margin: 6px 0; }
 @media (prefers-reduced-motion: reduce){
   .snapRoot{ scroll-behavior: auto; }
   #introOverlay{ display: none; }
+  .bgLayer{ transition: none; }
 }
