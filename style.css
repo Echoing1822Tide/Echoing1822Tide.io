@@ -234,6 +234,8 @@ li{ margin: 6px 0; }
   padding: calc(var(--topbarH) + 44px) 18px 70px 18px;
   isolation: isolate;
   overflow: hidden; /* clips parallax backgrounds cleanly */
+  /* Add a stacking context for border blending */
+  z-index: 0;
 }
 
 .snapSection::before{
@@ -248,10 +250,36 @@ li{ margin: 6px 0; }
   /* Dramatically increased scale for 3D wall effect */
   transform: translate3d(0, var(--bgOffset, 0px), 0) scale(.5);
   will-change: transform;
+  border-radius: 32px;
+  /* Ensure the border is visible under the overlay */
+  box-shadow: 0 0 0 12px transparent;
 }
 
 .snapSection.swapBg::before{
   background-image: var(--bgB, var(--bgA, none));
+}
+
+/* Gradient border overlay for background image */
+.snapSection::after {
+  content: "";
+  position: absolute;
+  inset: -10% -2%;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 32px;
+  /* Multi-stop radial and linear gradient for border blending */
+  background:
+    radial-gradient(ellipse at 50% 50%,
+      rgba(54,214,255,0.22) 0%,
+      rgba(155,123,255,0.13) 40%,
+      rgba(54,214,255,0.10) 60%,
+      rgba(0,0,0,0.00) 80%
+    ),
+    linear-gradient(to bottom, rgba(0,0,0,0.14), rgba(0,0,0,0.42));
+  /* Slightly larger than the image for border effect */
+  box-shadow:
+    0 0 0 16px rgba(54,214,255,0.10),
+    0 0 0 32px rgba(155,123,255,0.08);
 }
 
 /* Lighter overlay so backgrounds don’t look “dead” */
