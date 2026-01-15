@@ -186,13 +186,13 @@
     if (bgMusic.paused) {
       try {
         await bgMusic.play();
-        runIntroFrames(); // Start intro animation when music starts
+        if (!introAnimationRunning) runIntroFrames(); // Only start if not already running
       } catch {
         // No autoplay nag/toast (per your request).
       }
     } else {
       bgMusic.pause();
-      stopIntroFrames(); // Stop intro animation when music stops
+      stopIntroFrames(); // Always hide intro overlay when music stops
     }
 
     syncMusicUI();
