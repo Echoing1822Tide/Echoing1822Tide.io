@@ -245,8 +245,8 @@ li{ margin: 6px 0; }
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
-  /* Increased scale for 3D wall effect */
-  transform: translate3d(0, var(--bgOffset, 0px), 0) scale(1.22);
+  /* Dramatically increased scale for 3D wall effect */
+  transform: translate3d(0, var(--bgOffset, 0px), 0) scale(1.55);
   will-change: transform;
 }
 
