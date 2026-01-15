@@ -51,16 +51,43 @@
     ctx.drawImage(img, dx, dy, dw, dh);
   }
 
+  function drawStarFly(ctx, img, cw, ch, progress) {
+    const iw = img.naturalWidth || img.width;
+    const ih = img.naturalHeight || img.height;
+    if (!iw || !ih) return;
+
+    // Scale: start small, grow large (0.3x to 1.2x)
+    const minScale = 0.3;
+    const maxScale = 1.2;
+    const scale = minScale + (maxScale - minScale) * progress;
+
+    // Opacity: fade in, then fade out
+    let opacity = 1;
+    if (progress < 0.15) opacity = progress / 0.15;
+    else if (progress > 0.85) opacity = (1 - progress) / 0.15;
+    ctx.globalAlpha = Math.max(0, Math.min(1, opacity));
+
+    // Center
+    const dw = iw * scale;
+    const dh = ih * scale;
+    const dx = (cw - dw) / 2;
+    const dy = (ch - dh) / 2;
+
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.drawImage(img, dx, dy, dw, dh);
+    ctx.globalAlpha = 1;
+  }
+
   async function runIntroFrames() {
     if (!introOverlay || !introCanvas) return;
 
     const ctx = introCanvas.getContext("2d", { alpha: true });
     if (!ctx) return hideIntro();
 
-    // 12-frame fly-past sequence (adjust FPS if you want a longer/shorter intro)
+    // 12 images, each animates for 0.7s (total ~8.4s)
     const frames = Array.from({ length: 12 }, (_, i) => `assets/beats/${i + 1}_Website.png`);
-    const fps = 3;              // SLOWER: 3fps = ~4 seconds for 12 frames
-    const frameMs = 1000 / fps;
+    const frameDuration = 700; // ms per image
+    const totalDuration = frames.length * frameDuration;
 
     // Preload images
     const images = await Promise.all(frames.map(src => new Promise((resolve) => {
@@ -71,10 +98,7 @@
     })));
 
     const usable = images.filter(Boolean);
-    if (usable.length < 3) {
-      // If frames are missing, fail open quickly (don’t block the site).
-      return hideIntro();
-    }
+    if (usable.length < 3) return hideIntro();
 
     let rafId = 0;
     let start = performance.now();
@@ -85,35 +109,30 @@
       ctx.setTransform(1, 0, 0, 1, 0, 0);
 
       const elapsed = now - start;
-      const idx = Math.min(images.length - 1, Math.floor(elapsed / frameMs));
-      const img = images[idx];
+      const frameIdx = Math.floor(elapsed / frameDuration);
+      const frameProgress = (elapsed % frameDuration) / frameDuration;
 
-      if (img) drawContain(ctx, img, w, h, idx, images.length);
-
-      ctx.restore();
-
-      if (idx >= images.length - 1) {
-        // tiny hold so the last frame “lands” before fade out
-        window.setTimeout(hideIntro, 120);
+      if (frameIdx < usable.length) {
+        drawStarFly(ctx, usable[frameIdx], w, h, frameProgress);
+        rafId = requestAnimationFrame(render);
+      } else {
+        window.setTimeout(hideIntro, 400);
         cancelAnimationFrame(rafId);
-        return;
       }
 
-      rafId = requestAnimationFrame(render);
+      ctx.restore();
     }
 
-    function onResize() {
-      // Just forces a clean redraw next frame; canvas is resized in render()
-      start = performance.now(); // restart timing so resize doesn’t “jump”
-    }
+    window.addEventListener("resize", () => {
+      start = performance.now();
+    }, { passive: true });
 
-    window.addEventListener("resize", onResize, { passive: true });
     rafId = requestAnimationFrame(render);
 
     // Safety: never let intro trap the page
     window.setTimeout(() => {
       if (document.body.contains(introOverlay)) hideIntro();
-    }, 6000); // slightly longer for slower intro
+    }, totalDuration + 1200);
   }
 
   // Kick it off ASAP.
