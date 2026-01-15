@@ -278,7 +278,7 @@
     // 50% “lag” feel. Clamp so it never gets ridiculous.
     sections.forEach(sec => {
       const rel = st - sec.offsetTop;     // 0 when perfectly snapped
-      const offset = clamp(rel * 0.5, -140, 140);
+      const offset = clamp(rel * 0.5, -360, 360);
       sec.style.setProperty("--bgOffset", `${offset}px`);
     });
 
