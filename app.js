@@ -78,6 +78,55 @@
     ctx.globalAlpha = 1;
   }
 
+  function drawStarfieldFlyPast(ctx, images, cw, ch, now, startTime, duration, imgDuration, directions) {
+    ctx.clearRect(0, 0, cw, ch);
+
+    // For each image, compute its progress and draw if in range
+    for (let i = 0; i < images.length; ++i) {
+      const img = images[i];
+      if (!img) continue;
+
+      // Each image starts at a staggered time
+      const imgStart = startTime + i * ((duration - imgDuration) / (images.length - 1));
+      const imgEnd = imgStart + imgDuration;
+      const t = (now - imgStart) / imgDuration;
+
+      if (t < 0 || t > 1) continue; // Not visible yet or already gone
+
+      // Direction: alternate left/right
+      const dir = directions[i % directions.length];
+
+      // Scale: from 0.25 to 1.1
+      const scale = 0.25 + 0.85 * t;
+
+      // Opacity: fade in/out at ends
+      let opacity = 1;
+      if (t < 0.15) opacity = t / 0.15;
+      else if (t > 0.85) opacity = (1 - t) / 0.15;
+
+      ctx.save();
+      ctx.globalAlpha = opacity;
+
+      // Horizontal movement: from offscreen left/right to center, then offscreen opposite
+      const iw = img.naturalWidth || img.width;
+      const ih = img.naturalHeight || img.height;
+      const dw = iw * scale;
+      const dh = ih * scale;
+
+      // X: from -dw (left) or cw (right) to center, then offscreen opposite
+      let x;
+      if (dir === "left") {
+        x = cw + dw - (cw + dw + dw) * t; // right to left
+      } else {
+        x = -dw + (cw + dw + dw) * t; // left to right
+      }
+      const y = ch / 2 - dh / 2;
+
+      ctx.drawImage(img, x, y, dw, dh);
+      ctx.restore();
+    }
+  }
+
   let introAnimationRunning = false;
   let introRafId = 0;
 
@@ -90,10 +139,11 @@
     const ctx = introCanvas.getContext("2d", { alpha: true });
     if (!ctx) return hideIntro();
 
-    // 12 images, each animates for 0.7s (total ~8.4s)
+    // 12 images, 12s total, each image flies for 4s, staggered
     const frames = Array.from({ length: 12 }, (_, i) => `assets/beats/${i + 1}_Website.png`);
-    const frameDuration = 700; // ms per image
-    const totalDuration = frames.length * frameDuration;
+    const duration = 12000; // ms
+    const imgDuration = 4000; // ms per image
+    const directions = Array.from({ length: 12 }, (_, i) => (i % 2 === 0 ? "left" : "right"));
 
     // Preload images
     const images = await Promise.all(frames.map(src => new Promise((resolve) => {
@@ -109,31 +159,20 @@
     let start = performance.now();
 
     function render(now) {
-      if (!introAnimationRunning) return; // Stop if requested
+      if (!introAnimationRunning) return;
 
       const { w, h } = resizeCanvasForDpr(introCanvas);
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-      const elapsed = now - start;
-      const frameIdx = Math.floor(elapsed / frameDuration);
-      const frameProgress = (elapsed % frameDuration) / frameDuration;
+      drawStarfieldFlyPast(ctx, usable, w, h, now, start, duration, imgDuration, directions);
 
-      if (frameIdx < usable.length) {
-        drawStarFly(ctx, usable[frameIdx], w, h, frameProgress);
+      if (now - start < duration) {
         introRafId = requestAnimationFrame(render);
       } else {
         window.setTimeout(hideIntro, 400);
         introAnimationRunning = false;
         cancelAnimationFrame(introRafId);
       }
-
-      ctx.restore();
     }
-
-    window.addEventListener("resize", () => {
-      start = performance.now();
-    }, { passive: true });
 
     introRafId = requestAnimationFrame(render);
 
@@ -142,7 +181,7 @@
       if (document.body.contains(introOverlay)) hideIntro();
       introAnimationRunning = false;
       cancelAnimationFrame(introRafId);
-    }, totalDuration + 1200);
+    }, duration + 1200);
   }
 
   function stopIntroFrames() {
@@ -186,13 +225,13 @@
     if (bgMusic.paused) {
       try {
         await bgMusic.play();
-        if (!introAnimationRunning) runIntroFrames(); // Only start if not already running
+        if (!introAnimationRunning) runIntroFrames();
       } catch {
         // No autoplay nag/toast (per your request).
       }
     } else {
       bgMusic.pause();
-      stopIntroFrames(); // Always hide intro overlay when music stops
+      stopIntroFrames();
     }
 
     syncMusicUI();
