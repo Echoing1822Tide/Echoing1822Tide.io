@@ -1,6 +1,8 @@
 /* =========================================================
    James E. Gill — GitHub Pages Portfolio (plain HTML/CSS/JS)
-   - iOS Safari: keep vendor-prefixed properties BEFORE standard.
+   iOS Safari compatibility:
+   - -webkit-backdrop-filter before backdrop-filter
+   - -webkit-user-select before user-select
    ========================================================= */
 
 :root{
@@ -9,7 +11,6 @@
   --muted: rgba(255,255,255,0.72);
   --faint: rgba(255,255,255,0.55);
 
-  --line: rgba(255,255,255,0.14);
   --glass: rgba(10, 14, 24, 0.55);
   --glass2: rgba(10, 14, 24, 0.35);
 
@@ -17,17 +18,13 @@
   --accent2: #9b7bff;
 
   --topbarH: 68px;
+
   --radius: 18px;
   --shadow: 0 18px 55px rgba(0,0,0,0.45);
 }
 
 *{ box-sizing: border-box; }
-html, body {
-  height: 100%;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-}
+html, body{ height: 100%; }
 
 body{
   margin: 0;
@@ -35,17 +32,14 @@ body{
   color: var(--ink);
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
   line-height: 1.5;
-  overflow: hidden; /* page itself doesn't scroll; snapRoot does */
+  overflow: hidden; /* snapRoot owns scroll */
 }
 
 a{ color: inherit; text-decoration: none; }
-a:hover{ text-decoration: none; }
-
 h1,h2,h3{ margin: 0 0 10px 0; letter-spacing: -0.02em; }
 h2{ font-size: 32px; }
 h3{ font-size: 18px; }
 p{ margin: 0 0 14px 0; }
-
 ul{ margin: 10px 0 0 18px; padding: 0; }
 li{ margin: 6px 0; }
 
@@ -54,6 +48,7 @@ li{ margin: 6px 0; }
 
 /* ---------------------------------------------------------
    Intro overlay (PNG fly-past)
+   IMPORTANT: hidden overlay must NOT blur/darken the site.
    --------------------------------------------------------- */
 
 #introOverlay{
@@ -64,88 +59,44 @@ li{ margin: 6px 0; }
   display: grid;
   place-items: center;
   opacity: 1;
-  transition: opacity 650ms ease, visibility 0ms linear 650ms;
-  visibility: visible;
+  transition: opacity 650ms ease;
 }
 
-#introOverlay.hidden{
-  opacity: 0;
-  visibility: hidden;
-}
+#introOverlay.hidden{ opacity: 0; }
+#introOverlay.gone{ display: none; }
 
 #introCanvas{
-  position: relative;
-  z-index: 1;
   width: 100vw;
   height: 100vh;
   display: block;
 }
 
-#introOverlayTint {
+#introOverlayTint{
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 0;
-  background: radial-gradient(closest-side at 50% 30%,
-    rgba(0,0,0,0.10),
-    rgba(0,0,0,0.28),
-    rgba(0,0,0,0.55)
-  );
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  opacity: 0.82;
-}
-
-/* ---------------------------------------------------------
-   GLOBAL PARALLAX BACKGROUND STAGE (no section bleed)
-   --------------------------------------------------------- */
-
-#bgStage{
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-  background: #05070c;
-}
-
-.bgLayer{
-  position: absolute;
-  inset: 0;
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: 50% 50%;
-  opacity: 1;
-  will-change: opacity, background-position;
-  transition: opacity 520ms ease;
-  filter: saturate(1.02) contrast(1.02);
-}
-
-#bgLayerB{
-  opacity: 0;
-}
-
-.bgStage__overlay{
-  position: absolute;
-  inset: 0;
-  z-index: 2;
   background:
-    radial-gradient(closest-side at 25% 20%, rgba(54,214,255,0.14), transparent 58%),
-    radial-gradient(closest-side at 75% 80%, rgba(155,123,255,0.14), transparent 60%),
-    linear-gradient(to bottom, rgba(0,0,0,0.28), rgba(0,0,0,0.62));
+    radial-gradient(closest-side at 50% 30%,
+      rgba(0,0,0,0.06),
+      rgba(0,0,0,0.18),
+      rgba(0,0,0,0.42)
+    );
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  opacity: 0.55; /* lighter so backgrounds don’t look “dead” */
 }
 
 /* ---------------------------------------------------------
    Topbar
    --------------------------------------------------------- */
 
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
+.topbar{
   position: fixed;
   inset: 0 0 auto 0;
   height: var(--topbarH);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 0 18px;
   z-index: 2000;
   background: rgba(8, 10, 16, 0.55);
@@ -166,18 +117,10 @@ li{ margin: 6px 0; }
   margin-top: 2px;
 }
 
-.brand.left {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-}
-
-.topbar__right {
+.topbar__right{
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-left: auto;
 }
 
 .btn{
@@ -205,10 +148,7 @@ li{ margin: 6px 0; }
 }
 
 .btn:active{ transform: translateY(1px); }
-
-.btn--ghost{
-  background: rgba(0,0,0,0.18);
-}
+.btn--ghost{ background: rgba(0,0,0,0.18); }
 
 .vol{
   display: inline-flex;
@@ -227,9 +167,7 @@ li{ margin: 6px 0; }
   color: var(--muted);
 }
 
-.vol__slider{
-  width: 120px;
-}
+.vol__slider{ width: 120px; }
 
 /* ---------------------------------------------------------
    Section navigation
@@ -273,34 +211,58 @@ li{ margin: 6px 0; }
 
 /* ---------------------------------------------------------
    Scroll-snap root + sections
+   FIX: section bleed eliminated by using exact 100vh sections.
    --------------------------------------------------------- */
 
 .snapRoot{
   position: relative;
-  z-index: 1;            /* above bgStage */
-  height: 100vh;         /* container scrolls, not body */
-  width: 100%;
+  height: 100vh;
   overflow-y: auto;
   scroll-snap-type: y mandatory;
+  scroll-snap-stop: always;
   scroll-behavior: smooth;
   overscroll-behavior-y: none;
-  scroll-padding-top: calc(var(--topbarH) + 10px);
+  scroll-padding-top: var(--topbarH);
 }
 
-/* Each section "locks" cleanly; no negative margin overlap */
 .snapSection{
   position: relative;
-  min-height: 100vh;
+  height: 100vh;
   scroll-snap-align: start;
-  scroll-snap-stop: always;
   display: grid;
   align-items: center;
-  padding-top: calc(var(--topbarH) + 44px);
-  padding-left: 18px;
-  padding-right: 18px;
-  padding-bottom: 70px;
+  padding: calc(var(--topbarH) + 44px) 18px 70px 18px;
   isolation: isolate;
-  overflow: hidden; /* hard stop: prevents any internal bleed artifacts */
+  overflow: hidden; /* clips parallax backgrounds cleanly */
+}
+
+.snapSection::before{
+  content: "";
+  position: absolute;
+  inset: -10% -2%;
+  z-index: -2;
+  background-image: var(--bgA, none);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  transform: translate3d(0, var(--bgOffset, 0px), 0) scale(1.06);
+  will-change: transform;
+}
+
+.snapSection.swapBg::before{
+  background-image: var(--bgB, var(--bgA, none));
+}
+
+/* Lighter overlay so backgrounds don’t look “dead” */
+.snapSection::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(closest-side at 25% 20%, rgba(54,214,255,0.10), transparent 60%),
+    radial-gradient(closest-side at 75% 80%, rgba(155,123,255,0.10), transparent 62%),
+    linear-gradient(to bottom, rgba(0,0,0,0.14), rgba(0,0,0,0.42));
 }
 
 /* Center panel */
@@ -456,7 +418,8 @@ li{ margin: 6px 0; }
 }
 
 /* ---------------------------------------------------------
-   Scroll cue
+   Scroll cue (first section: text + arrow)
+   Arrow-only cues (all sections except last)
    --------------------------------------------------------- */
 
 .scrollCue{
@@ -529,8 +492,8 @@ li{ margin: 6px 0; }
   position: fixed;
   right: 10px;
   bottom: 10px;
-  width: 22px;
-  height: 22px;
+  width: 36px;
+  height: 36px;
   z-index: 2100;
   border: none;
   background: transparent;
@@ -541,7 +504,7 @@ li{ margin: 6px 0; }
 .easterEgg:focus-visible{
   opacity: 0.35;
   background: rgba(255,255,255,0.10);
-  border-radius: 6px;
+  border-radius: 8px;
   outline: 2px solid rgba(54,214,255,0.75);
   outline-offset: 2px;
 }
@@ -557,9 +520,7 @@ li{ margin: 6px 0; }
   display: none;
 }
 
-.modal.open{
-  display: block;
-}
+.modal.open{ display: block; }
 
 .modal__backdrop{
   position: absolute;
@@ -625,5 +586,4 @@ li{ margin: 6px 0; }
 @media (prefers-reduced-motion: reduce){
   .snapRoot{ scroll-behavior: auto; }
   #introOverlay{ display: none; }
-  .bgLayer{ transition: none; }
 }
