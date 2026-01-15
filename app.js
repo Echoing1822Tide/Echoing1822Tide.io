@@ -32,15 +32,19 @@
     return { dpr, w, h };
   }
 
-  function drawContain(ctx, img, cw, ch) {
+  function drawContain(ctx, img, cw, ch, frameIdx, totalFrames) {
     const iw = img.naturalWidth || img.width;
     const ih = img.naturalHeight || img.height;
     if (!iw || !ih) return;
 
-    const scale = Math.min(cw / iw, ch / ih);
+    const scale = Math.min(cw / iw, ch / ih) * 1.1; // Slightly zoomed for effect
     const dw = iw * scale;
     const dh = ih * scale;
-    const dx = (cw - dw) / 2;
+
+    // Calculate horizontal fly-by offset: -40% to +40% of canvas width
+    const flyPct = (frameIdx / (totalFrames - 1)) * 2 - 1; // -1 to +1
+    const maxOffset = cw * 0.40;
+    const dx = (cw - dw) / 2 + flyPct * maxOffset;
     const dy = (ch - dh) / 2;
 
     ctx.clearRect(0, 0, cw, ch);
@@ -55,7 +59,7 @@
 
     // 12-frame fly-past sequence (adjust FPS if you want a longer/shorter intro)
     const frames = Array.from({ length: 12 }, (_, i) => `assets/beats/${i + 1}_Website.png`);
-    const fps = 18;              // 18fps feels like a quick “fly-by” without being blink-fast
+    const fps = 3;              // SLOWER: 3fps = ~4 seconds for 12 frames
     const frameMs = 1000 / fps;
 
     // Preload images
@@ -84,7 +88,7 @@
       const idx = Math.min(images.length - 1, Math.floor(elapsed / frameMs));
       const img = images[idx];
 
-      if (img) drawContain(ctx, img, w, h);
+      if (img) drawContain(ctx, img, w, h, idx, images.length);
 
       ctx.restore();
 
@@ -109,7 +113,7 @@
     // Safety: never let intro trap the page
     window.setTimeout(() => {
       if (document.body.contains(introOverlay)) hideIntro();
-    }, 3500);
+    }, 6000); // slightly longer for slower intro
   }
 
   // Kick it off ASAP.
