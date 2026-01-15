@@ -4,15 +4,12 @@
   const clamp01 = (x) => Math.max(0, Math.min(1, x));
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
-  /* =========================================================
-     Intro overlay (PNG fly-past)
-     - Plays on page load
-     - After finish: display:none (prevents permanent blur/dim)
-     ========================================================= */
+  // --- Intro overlay (PNG fly-past) ---
 
   const introOverlay = document.getElementById("introOverlay");
   const introCanvas = document.getElementById("introCanvas");
 
+  // Only play intro when triggered
   function showIntro() {
     if (!introOverlay) return;
     introOverlay.classList.remove("gone");
@@ -25,7 +22,7 @@
     if (!introOverlay) return;
     introOverlay.classList.add("hidden");
     window.setTimeout(() => {
-      introOverlay.classList.add("gone"); // IMPORTANT: removes blur/tint effect entirely
+      introOverlay.classList.add("gone");
     }, 680);
   }
 
@@ -41,27 +38,20 @@
     return { w, h };
   }
 
-  function drawFlyPastFrame(ctx, img, cw, ch, dir, t) {
+  // Modified: fly-to-user (scale up, no horizontal movement)
+  function drawFlyToUserFrame(ctx, img, cw, ch, t) {
     const iw = img.naturalWidth || img.width;
     const ih = img.naturalHeight || img.height;
     if (!iw || !ih) return;
 
-    // Fill-ish, but not absurdly zoomed
-    const base = Math.max(cw / iw, ch / ih) * 0.90;
-    const scale = base * (0.92 + 0.20 * t);
+    // Start smaller, scale up toward user
+    const base = Math.max(cw / iw, ch / ih) * 0.70;
+    const scale = base * (1 + 0.55 * t); // scale up as t increases
     const dw = iw * scale;
     const dh = ih * scale;
 
-    const maxOffset = cw * 0.60;
-
-    // Start and end positions (off-screen travel)
-    const xFrom = (dir === "left") ? (cw + maxOffset) : (-dw - maxOffset);
-    const xTo   = (dir === "left") ? (-dw - maxOffset) : (cw + maxOffset);
-
-    const x = xFrom + (xTo - xFrom) * t;
-
-    // Slight vertical “arc” to feel 3D
-    const y = (ch - dh) / 2 + Math.sin(t * Math.PI) * (-ch * 0.03);
+    const x = (cw - dw) / 2;
+    const y = (ch - dh) / 2;
 
     // Fade in/out per frame
     const fadeIn = t < 0.12 ? (t / 0.12) : 1;
@@ -82,10 +72,7 @@
     const ctx = introCanvas.getContext("2d", { alpha: true });
     if (!ctx) return hideIntro();
 
-    // Frame list
     const frames = Array.from({ length: 12 }, (_, i) => `assets/beats/${i + 1}_Website.png`);
-
-    // Slower intro: ~15–16 seconds total
     const frameMs = 1300;
     const totalMs = frames.length * frameMs;
 
@@ -115,11 +102,8 @@
       const idx = Math.min(usable.length - 1, Math.floor(elapsed / frameMs));
       const t = clamp01((elapsed - idx * frameMs) / frameMs);
 
-      // Alternate directions
-      const dir = (idx % 2 === 0) ? "left" : "right";
-
       const img = usable[idx];
-      if (img) drawFlyPastFrame(ctx, img, w, h, dir, t);
+      if (img) drawFlyToUserFrame(ctx, img, w, h, t);
 
       if (elapsed < totalMs) {
         rafId = requestAnimationFrame(render);
@@ -138,16 +122,19 @@
     }, totalMs + 1500);
   }
 
-  // Play intro immediately (unless user prefers reduced motion)
+  // --- REMOVE: auto-play on page load ---
+  // const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // if (!reduceMotion) {
+  //   window.addEventListener("load", () => {
+  //     runIntroFrames().catch(() => hideIntro());
+  //   }, { once: true });
+  // } else {
+  //   hideIntro();
+  // }
+
+  // Instead, play intro when music button is clicked
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (!reduceMotion) {
-    window.addEventListener("load", () => {
-      runIntroFrames().catch(() => hideIntro());
-    }, { once: true });
-  } else {
-    // Ensure it’s removed completely
-    hideIntro();
-  }
+  if (reduceMotion) hideIntro();
 
   /* =========================================================
      Music (single track)
@@ -178,6 +165,9 @@
 
   async function toggleMusic() {
     if (!bgMusic) return;
+
+    // Play intro animation when toggling music
+    await runIntroFrames();
 
     if (bgMusic.paused) {
       try {
