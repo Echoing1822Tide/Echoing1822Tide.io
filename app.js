@@ -141,8 +141,8 @@
 
     // 12 images, 12s total, each image flies for 4s, staggered
     const frames = Array.from({ length: 12 }, (_, i) => `assets/beats/${i + 1}_Website.png`);
-    const duration = 12000; // ms
-    const imgDuration = 4000; // ms per image
+    const duration = 22000; // ms (was 12000)
+    const imgDuration = 7000; // ms per image (spread out for smoothness)
     const directions = Array.from({ length: 12 }, (_, i) => (i % 2 === 0 ? "left" : "right"));
 
     // Preload images
