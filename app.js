@@ -78,18 +78,14 @@
     ctx.globalAlpha = 1;
   }
 
+  let introAnimationRunning = false;
+  let introRafId = 0;
+
   async function runIntroFrames() {
     if (!introOverlay || !introCanvas) return;
 
-    // AUTOPLAY music with intro
-    if (bgMusic && bgMusic.paused) {
-      try {
-        await bgMusic.play();
-      } catch {
-        // Ignore autoplay errors (browser restrictions)
-      }
-      syncMusicUI && syncMusicUI();
-    }
+    introOverlay.classList.remove("hidden");
+    introAnimationRunning = true;
 
     const ctx = introCanvas.getContext("2d", { alpha: true });
     if (!ctx) return hideIntro();
@@ -110,10 +106,11 @@
     const usable = images.filter(Boolean);
     if (usable.length < 3) return hideIntro();
 
-    let rafId = 0;
     let start = performance.now();
 
     function render(now) {
+      if (!introAnimationRunning) return; // Stop if requested
+
       const { w, h } = resizeCanvasForDpr(introCanvas);
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -124,10 +121,11 @@
 
       if (frameIdx < usable.length) {
         drawStarFly(ctx, usable[frameIdx], w, h, frameProgress);
-        rafId = requestAnimationFrame(render);
+        introRafId = requestAnimationFrame(render);
       } else {
         window.setTimeout(hideIntro, 400);
-        cancelAnimationFrame(rafId);
+        introAnimationRunning = false;
+        cancelAnimationFrame(introRafId);
       }
 
       ctx.restore();
@@ -137,17 +135,20 @@
       start = performance.now();
     }, { passive: true });
 
-    rafId = requestAnimationFrame(render);
+    introRafId = requestAnimationFrame(render);
 
     // Safety: never let intro trap the page
     window.setTimeout(() => {
       if (document.body.contains(introOverlay)) hideIntro();
+      introAnimationRunning = false;
+      cancelAnimationFrame(introRafId);
     }, totalDuration + 1200);
   }
 
-  // Kick it off ASAP.
-  if (introOverlay && introCanvas) {
-    runIntroFrames().catch(hideIntro);
+  function stopIntroFrames() {
+    introAnimationRunning = false;
+    if (introOverlay) introOverlay.classList.add("hidden");
+    cancelAnimationFrame(introRafId);
   }
 
   /* =========================================================
@@ -185,11 +186,13 @@
     if (bgMusic.paused) {
       try {
         await bgMusic.play();
+        runIntroFrames(); // Start intro animation when music starts
       } catch {
         // No autoplay nag/toast (per your request).
       }
     } else {
       bgMusic.pause();
+      stopIntroFrames(); // Stop intro animation when music stops
     }
 
     syncMusicUI();

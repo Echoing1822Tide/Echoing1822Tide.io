@@ -237,11 +237,15 @@ li{ margin: 6px 0; }
 .snapSection{
   position: relative;
   min-height: calc(100vh - var(--topbarH));
+  margin-top: calc(-1 * var(--topbarH));
+  padding-top: 44px; /* 44px is your original padding */
   scroll-snap-align: start;
   scroll-snap-stop: always;
   display: grid;
   align-items: center;
-  padding: 44px 18px 70px 18px;
+  padding-left: 18px;
+  padding-right: 18px;
+  padding-bottom: 70px;
   isolation: isolate; /* keeps background layers sane */
 }
 
