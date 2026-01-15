@@ -4,7 +4,7 @@
   const clamp01 = (x) => Math.max(0, Math.min(1, x));
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
-  // --- Intro overlay (PNG fly-past) ---
+  // --- Intro overlay (PNG fly-to-user) ---
 
   const introOverlay = document.getElementById("introOverlay");
   const introCanvas = document.getElementById("introCanvas");
@@ -38,32 +38,27 @@
     return { w, h };
   }
 
-  // Modified: fly-to-user (scale up, no horizontal movement)
-  function drawFlyToUserFrame(ctx, img, cw, ch, t) {
+  // Helper for lerp
+  function lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+
+  // Draw a single image with scale and alpha
+  function drawImageScaledAlpha(ctx, img, cw, ch, scale, alpha) {
     const iw = img.naturalWidth || img.width;
     const ih = img.naturalHeight || img.height;
     if (!iw || !ih) return;
-
-    // Start smaller, scale up toward user
-    const base = Math.max(cw / iw, ch / ih) * 0.70;
-    const scale = base * (1 + 0.55 * t); // scale up as t increases
     const dw = iw * scale;
     const dh = ih * scale;
-
     const x = (cw - dw) / 2;
     const y = (ch - dh) / 2;
-
-    // Fade in/out per frame
-    const fadeIn = t < 0.12 ? (t / 0.12) : 1;
-    const fadeOut = t > 0.88 ? ((1 - t) / 0.12) : 1;
-    const alpha = clamp01(Math.min(fadeIn, fadeOut));
-
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.drawImage(img, x, y, dw, dh);
     ctx.restore();
   }
 
+  // Crossfade logic: each image is 3.5s, fade in at 5% scale, fade out at 70% scale
   async function runIntroFrames() {
     if (!introOverlay || !introCanvas) return;
 
@@ -73,8 +68,9 @@
     if (!ctx) return hideIntro();
 
     const frames = Array.from({ length: 12 }, (_, i) => `assets/beats/${i + 1}_Website.png`);
-    const frameMs = 1300;
-    const totalMs = frames.length * frameMs;
+    const frameMs = 3500;
+    const fadeFrac = 0.18; // 18% of duration for fade in/out
+    const fadeMs = frameMs * fadeFrac;
 
     // Preload
     const images = await Promise.all(frames.map(src => new Promise((resolve) => {
@@ -91,19 +87,43 @@
     }
 
     let rafId = 0;
+    const totalMs = usable.length * frameMs;
     const start = performance.now();
 
     function render(now) {
       const elapsed = now - start;
-
       const { w, h } = resizeCanvasForDpr(introCanvas);
       ctx.clearRect(0, 0, w, h);
 
-      const idx = Math.min(usable.length - 1, Math.floor(elapsed / frameMs));
-      const t = clamp01((elapsed - idx * frameMs) / frameMs);
+      // Which frame are we in?
+      const idx = Math.floor(elapsed / frameMs);
+      const tFrame = (elapsed % frameMs) / frameMs;
 
-      const img = usable[idx];
-      if (img) drawFlyToUserFrame(ctx, img, w, h, t);
+      // Draw current and next for crossfade
+      for (let i = 0; i < 2; ++i) {
+        const imgIdx = idx + i;
+        if (imgIdx >= usable.length) continue;
+        const img = usable[imgIdx];
+
+        // For current image (i==0), t = tFrame; for next (i==1), t = tFrame-1
+        let t = tFrame - i;
+        if (t < 0 || t > 1) continue;
+
+        // Scale: from 5% to 70%
+        const scale = lerp(0.05, 0.70, t);
+
+        // Alpha: fade in at start, fade out at end
+        let alpha = 1;
+        if (t < fadeFrac) {
+          alpha = t / fadeFrac;
+        } else if (t > 1 - fadeFrac) {
+          alpha = (1 - t) / fadeFrac;
+        }
+
+        alpha = clamp01(alpha);
+
+        drawImageScaledAlpha(ctx, img, w, h, scale, alpha);
+      }
 
       if (elapsed < totalMs) {
         rafId = requestAnimationFrame(render);
