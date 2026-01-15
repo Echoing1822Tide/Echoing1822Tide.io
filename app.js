@@ -183,11 +183,20 @@
     bgMusic.addEventListener("ended", syncMusicUI);
   }
 
+  // Track if intro video only plays once per page load
+  let introPlayed = false;
+
+  async function runIntroFramesOnce() {
+    if (introPlayed) return;
+    introPlayed = true;
+    await runIntroFrames();
+  }
+
   async function toggleMusic() {
     if (!bgMusic) return;
 
-    // Play intro animation when toggling music
-    await runIntroFrames();
+    // Play intro animation only once per page load
+    await runIntroFramesOnce();
 
     if (bgMusic.paused) {
       try {
