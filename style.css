@@ -248,10 +248,8 @@ li{ margin: 6px 0; }
   background-size: cover;
   background-repeat: no-repeat;
   /* Dramatically increased scale for 3D wall effect */
-  transform: translate3d(0, var(--bgOffset, 0px), 0) scale(1.7);
-  opacity: 0.38; /* faded, more distant */
-  filter: blur(2.5px); /* subtle blur for depth */
-  border-radius: 32px;
+  transform: translate3d(0, var(--bgOffset, 0px), 0) scale(.8);
+  will-change: transform;
   /* Ensure the border is visible under the overlay */
   box-shadow: 0 0 0 12px transparent;
 }
@@ -294,7 +292,6 @@ li{ margin: 6px 0; }
   padding: 26px 26px;
   border-radius: var(--radius);
   background: var(--glass);
-  opacity: 0.98; /* slightly more solid for separation */
   border: 1px solid rgba(255,255,255,0.14);
   box-shadow: var(--shadow);
   -webkit-backdrop-filter: blur(14px);
