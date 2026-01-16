@@ -611,8 +611,8 @@
         videoFile: "Screensaver_1.mp4",
         audioFile: "Travel_through_space.mp3",
         fadeInMs: 450,
-        fadeOutMs: 450,
-        endHoldMs: 150,
+        fadeOutMs: 0,
+        endHoldMs: 0,
       });
       if (!screensaverRunning) return;
 
