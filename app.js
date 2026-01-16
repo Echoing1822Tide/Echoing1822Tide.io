@@ -443,8 +443,8 @@
 
     fadeInMs = 450,
     fadeOutMs = 450,
-    audioLeadMs = 0,
-    videoFadeInDelayMs = 0,
+    audioLeadMs = 1000,
+    videoFadeInDelayMs = 1000,
   }) {
     if (!ssVideo || !ssAudio) return;
 
