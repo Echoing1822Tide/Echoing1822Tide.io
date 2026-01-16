@@ -557,7 +557,7 @@
         videoFile: "Screensaver_1.mp4",
         audioFile: "Travel_through_space.mp3",
         fadeInMs: 450,
-        fadeOutMs: 0,
+        fadeOutMs: 450,
       });
       if (!screensaverRunning) return;
 
@@ -567,8 +567,8 @@
         audioFile: "Blender_Hyperspace_Jump.mp3",
         fadeInMs: 650,
         fadeOutMs: 650,
-        audioLeadMs: 700,
-        videoFadeInDelayMs: 0,
+        audioLeadMs: 0,
+        videoFadeInDelayMs: 450,
       });
       if (!screensaverRunning) return;
 
@@ -576,7 +576,7 @@
       await playStep({
         videoFile: "Screensaver_3.mp4",
         audioFile: "Alien_Beach_Waves.mp3",
-        fadeInMs: 5000,
+        fadeInMs: 6000,
         fadeOutMs: 650,
         audioLeadMs: 700,
         videoFadeInDelayMs: 0,
