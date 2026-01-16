@@ -153,6 +153,12 @@ li{ margin: 6px 0; }
 .btn:active{ transform: translateY(1px); }
 .btn--ghost{ background: rgba(0,0,0,0.18); }
 
+.btn svg {
+  display: inline-block;
+  vertical-align: middle;
+  margin-bottom: 2px;
+}
+
 .vol{
   display: inline-flex;
   align-items: center;

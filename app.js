@@ -395,13 +395,22 @@
     ssAudio.src = audioSrc;
     ssAudio.load();
 
+    // Always keep video muted for autoplay compatibility
+    ssVideo.muted = true;
+
+    // Ensure modal is visible before playing
+    if (ssModal && !ssModal.classList.contains("open")) {
+      ssModal.classList.add("open");
+      ssModal.setAttribute("aria-hidden", "false");
+    }
+
     // Start video first (muted) so it can buffer
-    try { 
-      await ssVideo.play(); 
+    try {
+      await ssVideo.play();
     } catch (e) {
-      // Try to play muted if autoplay is blocked
-      ssVideo.muted = true;
-      try { await ssVideo.play(); } catch (_) {}
+      // If play fails, skip this step or show a fallback
+      console.warn("Screensaver video failed to play", e);
+      return;
     }
 
     // Optional: start audio slightly before video becomes visible
