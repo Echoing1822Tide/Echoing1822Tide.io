@@ -257,12 +257,12 @@ li{ margin: 6px 0; }
   /* Do NOT set opacity here, keep image visible */
 }
 
-.snapSection.swapBg::before{
+.snapSection.swapBg::after{
   background-image: var(--bgB, var(--bgA, none));
 }
 
 /* Combine border gradient and overlays in one ::after */
-.snapSection::after {
+.snapSection::before{
   content: "";
   position: absolute;
   inset: -10% -2%;
@@ -286,7 +286,7 @@ li{ margin: 6px 0; }
     );
   filter: blur(12px);              /* Reduce blur so it doesn't bleed into center */
   opacity: 0.55;                   /* Lower opacity for less bleed */
-  animation: borderGradientShift 1s linear infinite;
+  animation: borderGradientShift 5s linear infinite;
   background-size: 200% 200%;
   background-position: 0% 50%;
 }
