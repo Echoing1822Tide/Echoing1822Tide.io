@@ -333,8 +333,8 @@
   let screensaverRunning = false;
 
   // Try multiple likely folders so path mistakes don’t kill the feature.
-  const SS_VIDEO_DIRS = ["assets/screensavers", "assets/video", "video"];
-  const SS_AUDIO_DIRS = ["assets/screensavers", "assets/audio", "audio"];
+  const SS_VIDEO_DIRS = ["assets/screensavers"];
+  const SS_AUDIO_DIRS = ["assets/screensavers"];
 
   function openModal() {
     if (!ssModal) return;
@@ -443,8 +443,8 @@
 
     fadeInMs = 450,
     fadeOutMs = 450,
-    audioLeadMs = 1000,
-    videoFadeInDelayMs = 1000,
+    audioLeadMs = 0,
+    videoFadeInDelayMs = 0,
   }) {
     if (!ssVideo || !ssAudio) return;
 
@@ -556,7 +556,7 @@
         videoFile: "Screensaver_1.mp4",
         audioFile: "Travel_through_space.mp3",
         fadeInMs: 450,
-        fadeOutMs: 450,
+        fadeOutMs: 0,
       });
       if (!screensaverRunning) return;
 
@@ -564,8 +564,10 @@
       await playStep({
         videoFile: "Screensaver_2.mp4",
         audioFile: "Blender_Hyperspace_Jump.mp3",
-        fadeInMs: 450,
-        fadeOutMs: 450,
+        fadeInMs: 650,
+        fadeOutMs: 650,
+        audioLeadMs: 700,
+        videoFadeInDelayMs: 0,
       });
       if (!screensaverRunning) return;
 
