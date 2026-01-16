@@ -612,7 +612,7 @@
       await playStep({
         videoFile: "Screensaver_1.mp4",
         audioFile: "Travel_through_space.mp3",
-        fadeInMs: 450,
+        fadeInMs: 0,
         fadeOutMs: 0,
         endHoldMs: 0,
       });
