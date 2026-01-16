@@ -286,7 +286,7 @@ li{ margin: 6px 0; }
     );
   filter: blur(12px);              /* Reduce blur so it doesn't bleed into center */
   opacity: 0.55;                   /* Lower opacity for less bleed */
-  animation: borderGradientShift 10s linear infinite;
+  animation: borderGradientShift 1s linear infinite;
   background-size: 200% 200%;
   background-position: 0% 50%;
 }
