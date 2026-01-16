@@ -340,6 +340,7 @@
     ssModal.classList.remove("open");
     ssModal.setAttribute("aria-hidden", "true");
     stopScreensaver();
+    screensaverRunning = false; // <-- Reset here so you can re-trigger
   }
 
   if (ssClose) ssClose.addEventListener("click", closeModal);
@@ -404,6 +405,13 @@
       ssModal.setAttribute("aria-hidden", "false");
     }
 
+    // Wait for video to be ready before playing
+    await new Promise((resolve) => {
+      if (ssVideo.readyState >= 2) return resolve();
+      ssVideo.oncanplay = () => resolve();
+      setTimeout(resolve, 1000); // fallback after 1s
+    });
+
     // Start video first (muted) so it can buffer
     try {
       await ssVideo.play();
@@ -463,35 +471,38 @@
 
     openModal();
 
-    // Step 1
-    await playStep({
-      videoSrc: "assets/screensavers/Screensaver_1.mp4",
-      audioSrc: "assets/screensavers/Travel_through_space.mp3",
-      fadeInMs: 450,
-      fadeOutMs: 450,
-    });
-    if (!screensaverRunning) return;
+    try {
+      // Step 1
+      await playStep({
+        videoSrc: "assets/screensavers/Screensaver_1.mp4",
+        audioSrc: "assets/screensavers/Travel_through_space.mp3",
+        fadeInMs: 450,
+        fadeOutMs: 450,
+      });
+      if (!screensaverRunning) return;
 
-    // Step 2
-    await playStep({
-      videoSrc: "assets/screensavers/Screensaver_2.mp4",
-      audioSrc: "assets/screensavers/Blender_Hyperspace_Jump.mp3",
-      fadeInMs: 450,
-      fadeOutMs: 450,
-    });
-    if (!screensaverRunning) return;
+      // Step 2
+      await playStep({
+        videoSrc: "assets/screensavers/Screensaver_2.mp4",
+        audioSrc: "assets/screensavers/Blender_Hyperspace_Jump.mp3",
+        fadeInMs: 450,
+        fadeOutMs: 450,
+      });
+      if (!screensaverRunning) return;
 
-    // Step 3 (slow video fade, audio leads a bit)
-    await playStep({
-      videoSrc: "assets/screensavers/Screensaver_3.mp4",
-      audioSrc: "assets/screensavers/Alien_Beach_Waves.mp3",
-      fadeInMs: 5000,
-      fadeOutMs: 650,
-      audioLeadMs: 700,
-      videoFadeInDelayMs: 0,
-    });
-
-    closeModal();
+      // Step 3 (slow video fade, audio leads a bit)
+      await playStep({
+        videoSrc: "assets/screensavers/Screensaver_3.mp4",
+        audioSrc: "assets/screensavers/Alien_Beach_Waves.mp3",
+        fadeInMs: 5000,
+        fadeOutMs: 650,
+        audioLeadMs: 700,
+        videoFadeInDelayMs: 0,
+      });
+    } finally {
+      closeModal();
+      screensaverRunning = false; // <-- Always reset at the end
+    }
   }
 
   function stopScreensaver() {
@@ -513,6 +524,9 @@
   }
 
   if (eggBtn) {
-    eggBtn.addEventListener("click", runScreensaverSequence);
+    eggBtn.addEventListener("click", () => {
+      // Always allow running again
+      if (!screensaverRunning) runScreensaverSequence();
+    });
   }
 })();
