@@ -691,4 +691,40 @@
   if (rotatingWordSpan) {
     setInterval(rotateHeroWord, 1800); // Change word every 1.8 seconds
   }
+
+  // === Image Gallery ===
+  const galleryImages = Array.from({ length: 12 }, (_, i) => `assets/beats/${i + 1}_Website.png`);
+  let galleryIdx = 0;
+
+  const galleryImg = document.getElementById("galleryImg");
+  const galleryPrev = document.getElementById("galleryPrev");
+  const galleryNext = document.getElementById("galleryNext");
+
+  function showGalleryImg(idx) {
+    if (!galleryImg) return;
+    galleryImg.style.opacity = 0;
+    setTimeout(() => {
+      galleryImg.src = galleryImages[idx];
+      galleryImg.style.opacity = 1;
+    }, 250);
+  }
+
+  if (galleryPrev && galleryNext && galleryImg) {
+    galleryPrev.addEventListener("click", () => {
+      galleryIdx = (galleryIdx - 1 + galleryImages.length) % galleryImages.length;
+      showGalleryImg(galleryIdx);
+    });
+    galleryNext.addEventListener("click", () => {
+      galleryIdx = (galleryIdx + 1) % galleryImages.length;
+      showGalleryImg(galleryIdx);
+    });
+    // Optional: Arrow key navigation
+    document.addEventListener("keydown", (e) => {
+      if (document.activeElement.tagName === "INPUT") return;
+      if (e.key === "ArrowLeft") galleryPrev.click();
+      if (e.key === "ArrowRight") galleryNext.click();
+    });
+    // Initial image
+    showGalleryImg(galleryIdx);
+  }
 })();
