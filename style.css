@@ -250,6 +250,8 @@ li{ margin: 6px 0; }
   /* Dramatically increased scale for 3D wall effect */
   transform: translate3d(0, var(--bgOffset, 0px), 0) scale(.8);
   will-change: transform;
+  /* Soft blur for depth */
+  filter: blur(2.5px);
   /* Ensure the border is visible under the overlay */
   box-shadow: 0 0 0 12px transparent;
 }
@@ -266,23 +268,24 @@ li{ margin: 6px 0; }
   z-index: -1;
   pointer-events: none;
   border-radius: 32px;
-  /* Multi-layer backgrounds: border gradient, then overlays */
+  /* Animated shifting gradient for left/right borders */
   background:
-    /* Border gradient (outermost) */
-    radial-gradient(ellipse at 50% 50%,
-      rgba(54,214,255,0.22) 0%,
-      rgba(155,123,255,0.13) 40%,
-      rgba(54,214,255,0.10) 60%,
-      rgba(0,0,0,0.00) 80%
-    ),
-    /* Overlay gradients (same as before) */
-    radial-gradient(closest-side at 25% 20%, rgba(54,214,255,0.10), transparent 60%),
-    radial-gradient(closest-side at 75% 80%, rgba(155,123,255,0.10), transparent 62%),
-    linear-gradient(to bottom, rgba(0,0,0,0.14), rgba(0,0,0,0.42));
-  /* Optional: subtle box-shadow for extra glow */
-  box-shadow:
-    0 0 0 16px rgba(54,214,255,0.10),
-    0 0 0 32px rgba(155,123,255,0.08);
+    linear-gradient(120deg,
+      #36d6ff 0%,
+      #9b7bff 25%,
+      #36d6ff 50%,
+      #9b7bff 75%,
+      #36d6ff 100%
+    );
+  filter: blur(18px);
+  opacity: 0.55;
+  animation: borderGradientShift 8s linear infinite;
+}
+
+/* Animate the gradient's angle for shifting effect */
+@keyframes borderGradientShift {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
 }
 
 /* Center panel */
