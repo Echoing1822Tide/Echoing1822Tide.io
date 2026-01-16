@@ -261,7 +261,7 @@
     if (galleryInterval) clearInterval(galleryInterval);
     galleryInterval = setInterval(() => {
       if (!galleryPaused) nextGalleryImg();
-    }, 2000);
+    }, 5000); // was 2000, now 5000 ms (5 seconds)
   }
 
   function pauseGalleryAutoScroll() {
@@ -305,45 +305,187 @@
     startGalleryAutoScroll();
   }
 
-  // === Screensaver / Easter Egg Logic ===
+  // ---------------------------------------------------------
+  // Screensaver (Easter Egg)
+  // ---------------------------------------------------------
+
   const eggBtn = document.getElementById("easterEgg");
-  const screensaverModal = document.getElementById("screensaverModal");
+  const ssModal = document.getElementById("screensaverModal");
+  const ssClose = document.getElementById("closeScreensaver");
   const ssVideo = document.getElementById("ssVideo");
   const ssAudio = document.getElementById("ssAudio");
 
-  if (eggBtn && screensaverModal && ssVideo) {
-    // Set your video and audio sources here
-    ssVideo.src = "assets/screensaver/screensaver.mp4"; // <-- update path if needed
-    ssAudio.src = "assets/screensaver/screensaver.mp3"; // <-- update path if needed
+  let screensaverRunning = false;
 
-    // Open modal and play screensaver
-    eggBtn.addEventListener("click", () => {
-      screensaverModal.classList.add("open");
-      screensaverModal.setAttribute("aria-hidden", "false");
-      ssVideo.currentTime = 0;
-      ssAudio.currentTime = 0;
-      ssVideo.play();
-      ssAudio.play();
+  function openModal() {
+    if (!ssModal) return;
+    ssModal.classList.add("open");
+    ssModal.setAttribute("aria-hidden", "false");
+  }
+
+  function closeModal() {
+    if (!ssModal) return;
+    ssModal.classList.remove("open");
+    ssModal.setAttribute("aria-hidden", "true");
+    stopScreensaver();
+  }
+
+  if (ssClose) ssClose.addEventListener("click", closeModal);
+  if (ssModal) ssModal.addEventListener("click", (e) => {
+    // click outside content closes
+    if (e.target.classList.contains("modal__backdrop")) closeModal();
+  });
+
+  function fadeOpacity(el, from, to, ms) {
+    if (!el) return Promise.resolve();
+    el.style.opacity = String(from);
+    el.style.transition = `opacity ${ms}ms ease`;
+    requestAnimationFrame(() => (el.style.opacity = String(to)));
+    return new Promise((r) => setTimeout(r, ms));
+  }
+
+  function fadeAudio(audio, from, to, ms) {
+    if (!audio) return Promise.resolve();
+    const start = performance.now();
+    audio.volume = from;
+
+    return new Promise((resolve) => {
+      function tick(now) {
+        const t = Math.min(1, (now - start) / ms);
+        audio.volume = from + (to - from) * t;
+        if (t < 1) requestAnimationFrame(tick);
+        else resolve();
+      }
+      requestAnimationFrame(tick);
     });
+  }
 
-    // Close modal and pause screensaver
-    function closeScreensaver() {
-      screensaverModal.classList.remove("open");
-      screensaverModal.setAttribute("aria-hidden", "true");
-      ssVideo.pause();
-      ssAudio.pause();
+  async function playStep({
+    videoSrc,
+    audioSrc,
+    fadeInMs = 450,
+    fadeOutMs = 450,
+    audioLeadMs = 0,
+    videoFadeInDelayMs = 0,
+  }) {
+    if (!ssVideo || !ssAudio) return;
+
+    // Reset
+    ssVideo.pause();
+    ssAudio.pause();
+
+    ssVideo.style.opacity = "0";
+    ssAudio.volume = 0;
+
+    ssVideo.src = videoSrc;
+    ssVideo.load();
+
+    ssAudio.src = audioSrc;
+    ssAudio.load();
+
+    // Start video first (muted) so it can buffer
+    try { await ssVideo.play(); } catch (_) {}
+
+    // Optional: start audio slightly before video becomes visible
+    if (audioLeadMs > 0) {
+      try {
+        ssAudio.currentTime = 0;
+        await ssAudio.play();
+      } catch (_) {}
+      await fadeAudio(ssAudio, 0, 0.85, Math.min(600, fadeInMs));
+      await new Promise((r) => setTimeout(r, audioLeadMs));
+    } else {
+      try {
+        ssAudio.currentTime = 0;
+        await ssAudio.play();
+      } catch (_) {}
     }
 
-    // Close on backdrop or close button
-    screensaverModal.querySelectorAll("[data-close]").forEach((el) => {
-      el.addEventListener("click", closeScreensaver);
+    // Fade in video (and audio if not already done)
+    if (videoFadeInDelayMs > 0) {
+      await new Promise((r) => setTimeout(r, videoFadeInDelayMs));
+    }
+
+    if (audioLeadMs <= 0) {
+      await Promise.all([
+        fadeOpacity(ssVideo, 0, 1, fadeInMs),
+        fadeAudio(ssAudio, 0, 0.85, fadeInMs),
+      ]);
+    } else {
+      await fadeOpacity(ssVideo, 0, 1, fadeInMs);
+    }
+
+    // Wait near end of video, then fade out
+    const safetyMs = 250;
+    const durationMs = isFinite(ssVideo.duration) ? (ssVideo.duration * 1000) : 8000;
+    const waitMs = Math.max(0, durationMs - fadeOutMs - safetyMs);
+    await new Promise((r) => setTimeout(r, waitMs));
+
+    await Promise.all([
+      fadeOpacity(ssVideo, 1, 0, fadeOutMs),
+      fadeAudio(ssAudio, ssAudio.volume, 0, fadeOutMs),
+    ]);
+
+    ssVideo.pause();
+    ssAudio.pause();
+  }
+
+  async function runScreensaverSequence() {
+    if (screensaverRunning) return;
+    screensaverRunning = true;
+
+    openModal();
+
+    // Step 1
+    await playStep({
+      videoSrc: "assets/screensavers/Screensaver_1.mp4",
+      audioSrc: "assets/screensavers/Travel_through_space.mp3",
+      fadeInMs: 450,
+      fadeOutMs: 450,
+    });
+    if (!screensaverRunning) return;
+
+    // Step 2
+    await playStep({
+      videoSrc: "assets/screensavers/Screensaver_2.mp4",
+      audioSrc: "assets/screensavers/Blender_Hyperspace_Jump.mp3",
+      fadeInMs: 450,
+      fadeOutMs: 450,
+    });
+    if (!screensaverRunning) return;
+
+    // Step 3 (slow video fade, audio leads a bit)
+    await playStep({
+      videoSrc: "assets/screensavers/Screensaver_3.mp4",
+      audioSrc: "assets/screensavers/Alien_Beach_Waves.mp3",
+      fadeInMs: 5000,
+      fadeOutMs: 650,
+      audioLeadMs: 700,
+      videoFadeInDelayMs: 0,
     });
 
-    // Optional: close on Escape key
-    document.addEventListener("keydown", (e) => {
-      if (screensaverModal.classList.contains("open") && e.key === "Escape") {
-        closeScreensaver();
-      }
-    });
+    closeModal();
+  }
+
+  function stopScreensaver() {
+    screensaverRunning = false;
+
+    if (ssVideo) {
+      ssVideo.pause();
+      ssVideo.removeAttribute("src");
+      ssVideo.load();
+      ssVideo.style.opacity = "0";
+    }
+
+    if (ssAudio) {
+      ssAudio.pause();
+      ssAudio.removeAttribute("src");
+      ssAudio.load();
+      ssAudio.volume = 0;
+    }
+  }
+
+  if (eggBtn) {
+    eggBtn.addEventListener("click", runScreensaverSequence);
   }
 })();

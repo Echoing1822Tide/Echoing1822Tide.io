@@ -303,16 +303,21 @@
   </main>
 
   <!-- Hidden easter egg hotspot (bottom-right) -->
-  <button id="easterEgg" class="easterEgg" type="button" aria-label="Open hidden screensaver"></button>
+  <!-- Hidden easter egg hotspot (bottom-right) -->
+  <button id="easterEgg" class="easterEgg" aria-label="Secret screensaver"></button>
 
-  <!-- Screensaver modal -->
-  <div id="screensaverModal" class="modal" aria-hidden="true" role="dialog" aria-label="Screensaver">
-    <div class="modal__backdrop" data-close></div>
-    <div class="modal__content" role="document">
-      <button class="modal__close" type="button" data-close aria-label="Close">✕</button>
+  <!-- Screensaver Modal -->
+  <div id="screensaverModal" class="modal" aria-hidden="true">
+    <div class="modal__backdrop"></div>
 
-      <video id="ssVideo" class="ssVideo" preload="auto" playsinline muted></video>
-      <audio id="ssAudio" preload="auto"></audio>
+    <div class="modal__content" role="dialog" aria-modal="true" aria-label="Screensaver">
+      <button id="closeScreensaver" class="modal__close" aria-label="Close">✕</button>
+
+      <!-- Video is controlled by app.js (src set dynamically) -->
+      <video id="ssVideo" class="ssVideo" playsinline muted></video>
+
+      <!-- Audio is controlled by app.js (src set dynamically) -->
+      <audio id="ssAudio"></audio>
     </div>
   </div>
 

@@ -223,7 +223,8 @@ li{ margin: 6px 0; }
 
 .snapRoot{
   position: relative;
-  height: 100%;
+  height: 100vh;
+  height: 100dvh; /* Fallback for browsers that support dynamic viewport units */
   overflow-y: auto;
   overflow-x: hidden;
   scroll-snap-type: y mandatory;
@@ -236,6 +237,7 @@ li{ margin: 6px 0; }
 .snapSection{
   position: relative;
   height: 100vh; /* Use viewport height, not dynamic viewport height */
+  height: 100dvh; /* Fallback for browsers that support dynamic viewport units */
   box-sizing: border-box;
   scroll-snap-align: start;
   display: grid;
@@ -666,9 +668,9 @@ li{ margin: 6px 0; }
 }
 
 .galleryImg {
-  width: 320px;
-  height: 320px;
-  object-fit: cover;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
   border-radius: 24px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.45);
   background: #181c28;
@@ -681,7 +683,7 @@ li{ margin: 6px 0; }
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 2.6rem;
+  font-size: 1rem;
   background: rgba(54,214,255,0.16);
   border: none;
   border-radius: 999px;
