@@ -830,6 +830,16 @@ li{ margin: 6px 0; }
   .modal__content{
     inset: 10px;
   }
+    /* --- MOBILE: stop sections from clipping content --- */
+  .snapSection{
+    height: auto;          /* allow taller-than-viewport sections */
+    min-height: 100dvh;    /* still at least one screen tall */
+    align-items: start;    /* top-align content */
+    overflow: visible;     /* allow content to extend */
+
+    /* add bottom padding so nav doesn’t cover the last lines */
+    padding: calc(var(--topbarH) + 24px) 14px calc(110px + env(safe-area-inset-bottom)) 14px;
+  }
 }
 
 /* Extra-small phones: reduce button text width by hiding the span labels.
